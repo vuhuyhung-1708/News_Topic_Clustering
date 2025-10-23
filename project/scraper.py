@@ -7,7 +7,6 @@ import sys
 from urllib.parse import urlparse
 from config import SITES_CONFIG
 
-# Headers đầy đủ
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -15,17 +14,18 @@ HEADERS = {
     'Connection': 'keep-alive'
 }
 
-# --- Các hàm get_full_url, get_article_links, scrape_article_content giữ nguyên ---
 def get_full_url(base_url, href):
+    """Tạo URL đầy đủ từ link tương đối (nếu cần)."""
     if href.startswith('http'):
         return href
     return base_url.rstrip('/') + '/' + href.lstrip('/')
 
 def get_article_links(site_config, category_url):
+    """Lấy danh sách link bài báo từ trang chuyên mục."""
     print(f"\nĐang lấy link từ trang: {site_config['name']} - {category_url}")
     try:
-        response = requests.get(category_url, headers=HEADERS, timeout=15) # Tăng timeout
-        response.raise_for_status() # Kiểm tra lỗi HTTP
+        response = requests.get(category_url, headers=HEADERS, timeout=15)
+        response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         all_links_found = []
         for selector in site_config['link_selector']:
@@ -51,9 +51,10 @@ def get_article_links(site_config, category_url):
         return []
 
 def scrape_article_content(url, selectors):
+    """Thu thập tiêu đề, mô tả, nội dung chi tiết từ link một bài báo."""
     print(f"  Đang thu thập nội dung từ: {url}")
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15) # Tăng timeout
+        response = requests.get(url, headers=HEADERS, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         title_tag = soup.select_one(selectors['title'])
@@ -76,16 +77,15 @@ def scrape_article_content(url, selectors):
         print(f"  -> Lỗi không xác định khi thu thập bài báo {url}: {e}")
         return None
 
-# --- PHẦN THỰC THI CHÍNH ĐÃ THAY ĐỔI ---
 if __name__ == '__main__':
+    """Hàm chính: Nhận link, xác định trang, gọi hàm thu thập và lưu kết quả."""
     config = SITES_CONFIG
     print("\n" + "="*50)
     print("CHƯƠNG TRÌNH THU THẬP DỮ LIỆU TỪ NHIỀU LINK")
     print("="*50)
 
-    # 1. Nhận danh sách link từ người dùng
     links_input = input("Vui lòng điền các link chuyên mục muốn thu thập, cách nhau bằng dấu phẩy (,):\n")
-    category_urls = [link.strip() for link in links_input.split(',') if link.strip()] # Tách link và loại bỏ khoảng trắng thừa
+    category_urls = [link.strip() for link in links_input.split(',') if link.strip()]
 
     if not category_urls:
         print("Lỗi: Bạn chưa nhập link nào.")
@@ -94,13 +94,9 @@ if __name__ == '__main__':
     print(f"\nBắt đầu xử lý {len(category_urls)} link...")
     print("-" * 50)
 
-    # 2. Vòng lặp xử lý từng link
     for i, category_url in enumerate(category_urls):
         print(f"\nĐang xử lý link {i+1}/{len(category_urls)}: {category_url}")
-        
-        # Thêm try...except để bỏ qua link lỗi và tiếp tục
         try:
-            # 3. Tự động nhận diện trang báo
             domain = urlparse(category_url).netloc
             site_key = None
             for key in config:
@@ -110,52 +106,44 @@ if __name__ == '__main__':
             
             if site_key is None:
                 print("  Lỗi: Trang web này không được hỗ trợ. Bỏ qua link này.")
-                continue # Chuyển sang link tiếp theo
+                continue
 
             print(f"  Nhận diện trang báo: {config[site_key]['name']}")
             site_config = config[site_key]
-
-            # 4. Lấy danh sách link bài báo
             article_links = get_article_links(site_config, category_url)
             
             if not article_links:
                 print("  Không có link bài báo nào được tìm thấy. Chuyển sang link tiếp theo.")
-                continue # Chuyển sang link tiếp theo
+                continue
 
             links_to_scrape = article_links[:30]
             print(f"  Sẽ thu thập {len(links_to_scrape)} bài báo mới nhất...")
 
-            # 5. Thu thập nội dung chi tiết
             all_articles_data = []
             for link in links_to_scrape:
                 data = scrape_article_content(link, site_config['article_selectors'])
                 if data:
                     all_articles_data.append(data)
-                time.sleep(1) # Giữ khoảng nghỉ
+                time.sleep(1)
 
-            # 6. Lưu kết quả ra file riêng cho link này
             if all_articles_data:
                 df = pd.DataFrame(all_articles_data)
-                os.makedirs('data', exist_ok=True)
-                
-                # Tạo tên file động
+                output_folder = 'data/raw'
+                os.makedirs(output_folder, exist_ok=True)
                 category_name = urlparse(category_url).path.strip('/').replace('/', '_') or "trang-chu"
-                if category_name.endswith(".htm") or category_name.endswith(".html"):
+                if category_name.endswith((".htm", ".html")):
                     category_name = category_name.split('.')[0]
                 output_filename = f"{site_key}_{category_name}.csv"
-                full_path = os.path.join('data', output_filename)
+                full_path = os.path.join(output_folder, output_filename)
                 
-                # Ghi đè file cũ nếu đã tồn tại
                 df.to_csv(full_path, index=False, encoding='utf-8-sig')
                 
                 print(f"  Hoàn thành! Đã thu thập và lưu thành công {len(all_articles_data)} bài báo.")
                 print(f"  File đã được lưu tại: {full_path}")
             else:
                 print("  Cảnh báo: Không thu thập được dữ liệu từ bất kỳ bài báo nào cho link này.")
-
         except Exception as e:
             print(f"  Lỗi nghiêm trọng xảy ra khi xử lý link {category_url}: {e}. Bỏ qua link này.")
-        
-        print("-" * 50) # In dấu ngăn cách giữa các link
+        print("-" * 50)
 
     print("\nĐã xử lý xong tất cả các link.")
