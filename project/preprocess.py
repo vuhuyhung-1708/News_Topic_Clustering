@@ -5,7 +5,7 @@ import re
 import sys
 from underthesea import word_tokenize
 
-# --- PHẦN 1: GỘP DỮ LIỆU TỪ CÁC FILE CSV ---
+# ---GỘP DỮ LIỆU TỪ CÁC FILE CSV ---
 print("Bắt đầu gộp dữ liệu từ các file CSV thô...")
 data_path = 'data/raw'
 all_csv_files = glob.glob(os.path.join(data_path, "*.csv"))
@@ -36,7 +36,7 @@ print("Kiểm tra dữ liệu thiếu (NaN) trước xử lý:")
 print(combined_df.isnull().sum())
 print("-" * 50)
 
-# --- PHẦN 2: TIỀN XỬ LÝ VĂN BẢN ---
+# --- TIỀN XỬ LÝ VĂN BẢN ---
 stopwords_path = 'project/vietnamese-stopwords.txt'
 try:
     with open(stopwords_path, 'r', encoding='utf-8') as f:
@@ -47,34 +47,28 @@ except FileNotFoundError:
     print(f"Cảnh báo: Không tìm thấy file stopwords tại '{stopwords_path}'.")
     stopwords = set()
 
-# --- HÀM PREPROCESS_TEXT ĐÃ SỬA ---
+# --- HÀM PREPROCESS_TEXT ---
 def preprocess_text(text):
     """Làm sạch văn bản thô: xóa link/email, chuyển chữ thường, xóa ký tự đặc biệt, tách từ, bỏ từ dừng."""
     # 1. Xử lý giá trị NaN
     if pd.isna(text):
         return ""
     text = str(text)
-
-    # 2. XÓA URLs/Emails (Regex toàn diện hơn)
     # Xóa http/https/ftp links
     text = re.sub(r'https?://[^\s\n\r]+', '', text)
     # Xóa www links
     text = re.sub(r'www\.[^\s\n\r]+', '', text)
-    # Xóa các tên miền .com/.vn/.net/... còn sót lại
+    # Xóa các tên miền .com/.vn/.net/... 
     text = re.sub(r'(?<!\w)(\S+\.(?:com|vn|net|org|edu|gov|info|biz|asia|mobi|name|pro|tel|xxx|xyz|me|tv|cc|ws|io|ai|gl|us|uk|ca|au|de|fr|jp|cn|ru|br|in|eu))(?!\w)', '', text)
     # Xóa email addresses
     text = re.sub(r'\S+@\S+', '', text)
-
     # 3. Chuyển thành chữ thường
     text = text.lower()
-
     # 4. Loại bỏ ký tự đặc biệt, số (giữ lại chữ TV và dấu cách)
     # Thay thế bằng dấu cách để tránh dính chữ
     text = re.sub(r'[^a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]', ' ', text)
-
     # 5. Xóa khoảng trắng thừa
     text = re.sub(r'\s+', ' ', text).strip()
-
     # 6. Tách từ
     try:
         # Sử dụng format="text" để trả về chuỗi, sau đó split()
@@ -89,7 +83,6 @@ def preprocess_text(text):
 
     # 8. Ghép các từ lại thành một chuỗi
     return ' '.join(processed_tokens)
-# --- KẾT THÚC HÀM ĐÃ SỬA ---
 
 print("\nBắt đầu tiền xử lý văn bản...")
 combined_df['processed_content'] = combined_df['content'].apply(preprocess_text)
