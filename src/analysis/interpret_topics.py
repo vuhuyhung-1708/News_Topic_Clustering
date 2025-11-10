@@ -4,7 +4,7 @@ import os
 
 
 print("Nạp các file đã lưu...")
-model_path = 'data/processed/clustered_results/kmeans_model_k5.pkl'
+model_path = 'data/processed/clustered_results/kmeans_model_k19.pkl'
 vectorizer_path = 'data/processed/tfidf_vectorizer.pkl'
 
 try:

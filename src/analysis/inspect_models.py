@@ -2,7 +2,7 @@ import pickle
 import sys
 import os
 
-model_path = 'data/processed/clustered_results/kmeans_model_k10.pkl'
+model_path = 'data/processed/clustered_results/kmeans_model_k19.pkl'
 vectorizer_path = 'data/processed/tfidf_vectorizer.pkl'
 
 print(f"--- 1. Kiểm tra file K-Means Model ({model_path}) ---")

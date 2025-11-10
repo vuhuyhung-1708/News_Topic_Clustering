@@ -4,11 +4,11 @@ import pickle
 import sys
 import os
 
-# --- BƯỚC 1: CÁC THIẾT LẬP CƠ BẢN ---
-K_VALUE = 10 
 
-# --- ĐƯỜNG DẪN ĐÃ ĐƯỢC ĐƠN GIẢN HÓA ---
-# Giả định bạn luôn chạy file này từ thư mục gốc News-Topic-Clustering
+K_VALUE = 20
+
+
+
 PROCESSED_DIR = 'data/processed'
 MATRIX_PATH = os.path.join(PROCESSED_DIR, 'tfidf_matrix.pkl')
 CSV_PATH = os.path.join(PROCESSED_DIR, 'processed_data.csv')
