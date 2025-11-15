@@ -5,7 +5,8 @@ import sys
 import os
 import math
 
-# --- CẤU HÌNH ---
+#trực quan hóa đám mây từ khóa cho các cụm đã phân loại
+
 K_VALUE = 35 # Số cụm tốt nhất bạn đã chọn
 
 # Thiết lập đường dẫn (đi ngược 3 cấp từ file này ra thư mục gốc)

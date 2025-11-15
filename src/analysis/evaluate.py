@@ -7,14 +7,14 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import time
 
-
+#vẽ 2 biểu đồ 
 K_MIN = 5
-K_MAX = 40      
+K_MAX = 50     
 STEP = 1
 
 # Thiết lập đường dẫn (đi ngược 3 cấp từ file này ra thư mục gốc)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MATRIX_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'tfidf_matrix.pkl')
+MATRIX_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'lsa_matrix.pkl')
 FIGURES_DIR = os.path.join(BASE_DIR, 'results', 'figures')
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
