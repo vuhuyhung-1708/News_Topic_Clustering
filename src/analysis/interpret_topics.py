@@ -2,9 +2,10 @@ import pickle
 import sys
 import os
 
-# --- CẤU HÌNH ---
-# Đặt K_VALUE khớp với model bạn muốn xem (ví dụ: 34 hoặc 35)
-K_VALUE = 34 
+
+
+K_VALUE = 30
+
 N_COMPONENTS = 300 # Phải khớp với file feature_extraction.py
 
 # --- ĐƯỜNG DẪN FILE ---

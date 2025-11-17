@@ -5,7 +5,7 @@ import sys
 import os
 
 
-K_VALUE = 34
+K_VALUE = 29  # Đặt K_VALUE khớp với model K-Means LSA bạn muốn sử dụng
 
 
 PROCESSED_DIR = 'data/processed'
