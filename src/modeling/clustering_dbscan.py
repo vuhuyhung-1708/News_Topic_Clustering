@@ -4,7 +4,7 @@ import pickle
 import sys
 import os
 import numpy as np
-
+#không cần thiết 
 # --- CẤU HÌNH ---
 # Đây là 2 tham số quan trọng nhất của DBSCAN
 # Bạn sẽ cần "thử nghiệm" (thay đổi) 2 giá trị này để xem kết quả nào tốt nhất

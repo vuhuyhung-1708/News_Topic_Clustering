@@ -4,7 +4,7 @@ import os
 
 
 
-K_VALUE = 30
+K_VALUE = 34
 
 N_COMPONENTS = 300 # Phải khớp với file feature_extraction.py
 

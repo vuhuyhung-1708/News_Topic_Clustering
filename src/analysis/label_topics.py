@@ -5,95 +5,102 @@ import os
 import numpy as np
 
 # --- CẤU HÌNH ---
-# Đặt K_VALUE khớp với model K-Means LSA tốt nhất của bạn
-K_VALUE = 34 
-N_KEYWORDS = 15       # Số lượng từ khóa muốn xem
-N_REPRESENTATIVES = 3 # Số lượng bài báo đại diện muốn xem
+# Số lượng bài báo đại diện muốn xem
+N_REPRESENTATIVES = 1 
 
-# --- ĐƯỜNG DẪN ĐƠN GIẢN HÓA ---
-PROCESSED_DIR = 'data/processed'
-CSV_PATH = os.path.join(PROCESSED_DIR, 'processed_data.csv')
-VECTORIZER_PATH = os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl') # "Từ điển" TF-IDF
-LSA_MODEL_PATH = os.path.join(PROCESSED_DIR, 'lsa_model.pkl') # "Bộ nén" LSA
-MODEL_DIR = os.path.join(PROCESSED_DIR, 'clustered_results')
-KMEANS_MODEL_PATH = os.path.join(MODEL_DIR, f'kmeans_lsa_k{K_VALUE}.pkl')
+# --- ĐƯỜNG DẪN ---
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
+TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'two_stage_results')
 
-# --- 1. NẠP DỮ LIỆU VÀ MODEL ---
-print(f"--- Bắt đầu gán nhãn cho K={K_VALUE} ---")
-print("Nạp các file CSV và Model...")
+# 1. Các file Model (Dùng để biến đổi văn bản)
+VECTORIZER_PATH = os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl')
+LSA_MODEL_PATH = os.path.join(PROCESSED_DIR, 'lsa_model.pkl')
+
+# 2. File Model K-Means (Của quy trình 2 giai đoạn)
+KMEANS_MODEL_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_two_stage.pkl')
+
+# 3. File Dữ liệu SẠCH (Quan trọng: Dùng file này thay vì file gốc)
+CLEAN_CSV_PATH = os.path.join(TWO_STAGE_DIR, 'two_stage_clusters.csv')
+
+# --- 1. NẠP DỮ LIỆU ---
+print(f"--- PHÂN TÍCH CHỦ ĐỀ NỔI BẬT (TWO-STAGE CLUSTERING) ---")
+print("Đang nạp dữ liệu sạch và các model...")
 try:
+    # Nạp model
     vectorizer = pickle.load(open(VECTORIZER_PATH, 'rb'))
     lsa_model = pickle.load(open(LSA_MODEL_PATH, 'rb'))
     kmeans = pickle.load(open(KMEANS_MODEL_PATH, 'rb'))
     
-    df = pd.read_csv(CSV_PATH)
-    df.dropna(subset=['processed_content'], inplace=True)
-    df = df[df['processed_content'].str.strip() != '']
-    df.reset_index(drop=True, inplace=True) # Rất quan trọng để index khớp
+    # Nạp dữ liệu sạch
+    df_clean = pd.read_csv(CLEAN_CSV_PATH)
+    # Đảm bảo không có giá trị rỗng
+    df_clean = df_clean.dropna(subset=['processed_content'])
+    df_clean = df_clean[df_clean['processed_content'].str.strip() != '']
+    df_clean.reset_index(drop=True, inplace=True)
 
-    print("Nạp dữ liệu thành công.")
+    print(f"Nạp thành công. Số lượng bài báo sạch: {len(df_clean)}")
+    print(f"Số lượng cụm (K): {kmeans.n_clusters}")
 
 except Exception as e:
-    print(f"Lỗi khi nạp dữ liệu: {e}.")
+    print(f"Lỗi nạp dữ liệu: {e}")
+    print("Hãy đảm bảo bạn đã chạy 'two_stage_clustering.py' trước.")
     sys.exit(1)
 
-# --- 2. GÁN NHÃN CỤM VÀ TÍNH KHOẢNG CÁCH ---
-print("Đang gán nhãn cụm và tính khoảng cách...")
-# Tải ma trận LSA "tốt nhất"
-MATRIX_PATH = os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl')
-with open(MATRIX_PATH, 'rb') as f:
-    X_lsa = pickle.load(f)
+# --- 2. TÁI TẠO VECTOR CHO DỮ LIỆU SẠCH ---
+# Bước này cực quan trọng: Chúng ta phải biến đổi dữ liệu sạch về dạng vector 
+# để tính khoảng cách tới tâm cụm.
+print("Đang vector hóa lại dữ liệu sạch để tính khoảng cách...")
+corpus_clean = df_clean['processed_content'].tolist()
+X_tfidf = vectorizer.transform(corpus_clean)
+X_lsa_clean = lsa_model.transform(X_tfidf)
 
-if X_lsa.shape[0] != len(df):
-    print(f"Lỗi: Số dòng ma trận LSA ({X_lsa.shape[0]}) và CSV ({len(df)}) không khớp.")
-    sys.exit(1)
+# Tính khoảng cách từ các bài báo sạch đến các tâm cụm
+distances = kmeans.transform(X_lsa_clean)
 
-# Gán nhãn cluster vào df
-df['cluster'] = kmeans.predict(X_lsa)
-# Tính khoảng cách từ mỗi điểm đến TẤT CẢ các tâm cụm
-distances = kmeans.transform(X_lsa)
+# --- 3. CHUẨN BỊ TỪ KHÓA ---
+terms = vectorizer.get_feature_names_out()
+centroids_lsa = kmeans.cluster_centers_
+svd = lsa_model.named_steps['truncatedsvd']
+centroids_tfidf = svd.inverse_transform(centroids_lsa)
+sorted_term_indices = centroids_tfidf.argsort()[:, ::-1]
 
-# --- 3. TRÍCH XUẤT TỪ KHÓA VÀ BÀI BÁO ĐẠI DIỆN ---
-print("\n--- KẾT QUẢ GÁN NHÃN CHỦ ĐỀ ---")
+# --- 4. IN KẾT QUẢ ---
+# Đếm số lượng bài báo trong mỗi cụm (từ file sạch) và sắp xếp
+cluster_counts = df_clean['cluster'].value_counts().sort_values(ascending=False)
 
-try:
-    # Logic lấy từ khóa
-    terms = vectorizer.get_feature_names_out()
-    centroids_lsa = kmeans.cluster_centers_
-    svd = lsa_model.named_steps['truncatedsvd']
-    centroids_tfidf = svd.inverse_transform(centroids_lsa)
-    sorted_term_indices = centroids_tfidf.argsort()[:, ::-1]
+print("\n--- DANH SÁCH CHỦ ĐỀ THEO ĐỘ NỔI BẬT ---\n")
 
-    for i in range(K_VALUE): # Lặp qua từng chủ đề
-        print(f"\n==================== CHỦ ĐỀ {i} ====================")
-        
-        # 1. LẤY TỪ KHÓA HÀNG ĐẦU
-        top_indices = sorted_term_indices[i, :N_KEYWORDS]
-        top_keywords = [terms[idx] for idx in top_indices]
-        print(f"  TỪ KHÓA CHÍNH: {', '.join(top_keywords)}")
-        
-        # 2. LẤY BÀI BÁO ĐẠI DIỆN (Logic đã sửa lỗi)
-        
-        # Lấy index (vị trí) của tất cả bài báo thuộc cụm i
-        indices_in_cluster = df[df['cluster'] == i].index
-        
-        if len(indices_in_cluster) == 0:
-            print("  BÀI BÁO ĐẠI DIỆN: (Không tìm thấy bài báo nào trong cụm này)")
-            continue
+rank = 1
+for cluster_id, count in cluster_counts.items():
+    # Lấy index của các bài báo thuộc cụm này trong df_clean
+    indices_in_cluster = df_clean[df_clean['cluster'] == cluster_id].index
+    
+    # Lấy khoảng cách tương ứng
+    cluster_distances = distances[indices_in_cluster, cluster_id]
+    
+    # Tìm bài gần tâm nhất
+    # argsort trả về vị trí trong mảng cluster_distances
+    local_min_indices = np.argsort(cluster_distances)[:10] # Lấy top 10 để lọc
+    
+    # Map về index của df_clean
+    candidate_indices = indices_in_cluster[local_min_indices]
+    
+    # Chọn bài báo đại diện (Lọc tiêu đề ngắn/lỗi)
+    representative_title = "(Không tìm thấy tiêu đề hợp lệ)"
+    for idx in candidate_indices:
+        title = str(df_clean.loc[idx, 'title']).strip()
+        if title.lower() != "không tìm thấy" and len(title) > 10:
+            representative_title = title
+            break
             
-        # Lấy khoảng cách của các bài báo này ĐẾN TÂM CỤM CỦA CHÍNH NÓ (tâm i)
-        cluster_distances = distances[indices_in_cluster, i]
-        
-        # Sắp xếp các khoảng cách này (từ nhỏ đến lớn) và lấy N chỉ số đầu tiên
-        # argsort() trả về chỉ số (vị trí) của các bài báo TRONG DANH SÁCH cluster_distances
-        local_indices = np.argsort(cluster_distances)[:N_REPRESENTATIVES]
-        
-        # Chuyển đổi chỉ số cục bộ (local) về chỉ số gốc (global) của DataFrame
-        representative_indices = indices_in_cluster[local_indices]
-        
-        print("\n  BÀI BÁO ĐẠI DIỆN:")
-        for j, index in enumerate(representative_indices):
-            print(f"    #{j+1}: {df.loc[index, 'title']}")
+    # Lấy từ khóa
+    top_indices = sorted_term_indices[cluster_id, :10]
+    top_keywords = [terms[idx] for idx in top_indices]
 
-except Exception as e:
-    print(f"Lỗi khi trích xuất: {e}")
+    print(f"   TOP {rank}: CHỦ ĐỀ {cluster_id} (Số lượng: {count} bài báo)")
+    print(f"   Từ khóa: {', '.join(top_keywords)}")
+    print(f"   Tiêu đề đại diện: \"{representative_title}\"")
+    
+    print("-" * 60)
+    rank += 1

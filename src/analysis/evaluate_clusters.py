@@ -2,7 +2,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-
+#không cần thiết
 MATRIX_PATH = "data/processed/lsa_matrix.pkl"
 CSV_PATH = "data/processed/clustered_results/clustered_lsa_k25.csv"
 
