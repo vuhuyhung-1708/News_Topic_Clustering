@@ -10,7 +10,7 @@ import random # Thêm thư viện random
 
 from config import SITES_CONFIG
 
-# Headers chung, đã BỎ User-Agent
+# Headers chung
 HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'Accept-Language': 'en-US,en;q=0.9,vi;q=0.8',
@@ -71,7 +71,7 @@ def get_article_links(site_config, category_url):
 def scrape_article_content(url, selectors):
     """Thu thập tiêu đề, mô tả, nội dung chi tiết từ link một bài báo."""
     try:
-        # Nâng cấp: Tạo header động với User-Agent ngẫu nhiên
+        #Tạo header động với User-Agent ngẫu nhiên
         request_headers = HEADERS.copy()
         request_headers['User-Agent'] = random.choice(USER_AGENTS)
         
@@ -94,8 +94,6 @@ def scrape_article_content(url, selectors):
             
         return {'url': url, 'title': title, 'description': description, 'content': content}
     except Exception as e:
-        # (Không in lỗi ở đây để tránh làm nhiễu console khi chạy đa luồng)
-        # Lỗi sẽ được bắt và xử lý ở hàm main
         return None # Trả về None nếu có lỗi
 
 if __name__ == '__main__':

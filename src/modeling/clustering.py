@@ -5,26 +5,23 @@ import sys
 import os
 
 
-K_VALUE = 29  # Đặt K_VALUE khớp với model K-Means LSA bạn muốn sử dụng
-
+K_VALUE = 29  
 
 PROCESSED_DIR = 'data/processed'
-
-# 1. ĐƯỜNG DẪN INPUT (Đọc ma trận LSA "tốt nhất")
 MATRIX_PATH = os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl') 
 CSV_PATH = os.path.join(PROCESSED_DIR, 'processed_data.csv')
 
-# 2. ĐƯỜNG DẪN OUTPUT (Lưu vào thư mục 'clustered_results' như bạn muốn)
+#ĐƯỜNG DẪN OUTPUT
 OUTPUT_DIR = os.path.join(PROCESSED_DIR, 'clustered_results')
-os.makedirs(OUTPUT_DIR, exist_ok=True) # Tự động tạo thư mục nếu chưa có
-
-MODEL_PATH = os.path.join(OUTPUT_DIR, f'kmeans_lsa_k{K_VALUE}.pkl') # Tên file mới
-RESULT_PATH = os.path.join(OUTPUT_DIR, f'clustered_lsa_k{K_VALUE}.csv') # Tên file mới
+os.makedirs(OUTPUT_DIR, exist_ok=True) 
+#Tạo file mới
+MODEL_PATH = os.path.join(OUTPUT_DIR, f'kmeans_lsa_k{K_VALUE}.pkl') 
+RESULT_PATH = os.path.join(OUTPUT_DIR, f'clustered_lsa_k{K_VALUE}.csv') 
 # ----------------------------------------
 
 def load_data(matrix_path, csv_path):
-    """Nạp ma trận LSA (đã nén) và file CSV, kiểm tra tính toàn vẹn."""
-    print("Nạp ma trận LSA (vector đã nén) và file CSV...")
+    
+    print("Nạp ma trận LSA ")
     try:
         with open(matrix_path, 'rb') as f:
             X = pickle.load(f) # Nạp ma trận LSA
@@ -48,7 +45,6 @@ def load_data(matrix_path, csv_path):
         sys.exit(1)
 
 def load_or_train_model(model_path, k, X):
-    """Kiểm tra nếu model LSA đã tồn tại thì tải, nếu không thì huấn luyện model mới."""
     if os.path.exists(model_path):
         print(f"Đã tìm thấy model LSA (k={k}). Đang tải...")
         with open(model_path, 'rb') as f:
@@ -79,10 +75,8 @@ def save_results(df, labels, result_path):
     except Exception as e:
         print(f"Lỗi khi lưu kết quả CSV: {e}")
 
-# --- BƯỚC CHÍNH ĐỂ CHẠY CHƯƠNG TRÌNH ---
-if __name__ == '__main__':
-    """Hàm chính: Tải dữ liệu LSA, huấn luyện/tải model K-Means, gán nhãn và lưu kết quả."""
-    
+
+if __name__ == '__main__':   
     print(f"--- Bắt đầu quy trình K-Means trên ma trận LSA (k = {K_VALUE}) ---")
     
     # 1. Tải dữ liệu

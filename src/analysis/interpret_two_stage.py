@@ -10,7 +10,6 @@ N_KEYWORDS = 15
 N_REPRESENTATIVES = 3
 N_CANDIDATES = 20 # Lấy nhiều ứng viên để lọc bài lỗi
 
-# --- ĐƯỜNG DẪN ---
 PROCESSED_DIR = 'data/processed'
 CSV_PATH = os.path.join(PROCESSED_DIR, 'processed_data.csv')
 VECTORIZER_PATH = os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl')
@@ -19,7 +18,6 @@ MODEL_DIR = os.path.join(PROCESSED_DIR, 'two_stage_results')
 KMEANS_MODEL_PATH = os.path.join(MODEL_DIR, f'kmeans_two_stage.pkl')
 MATRIX_PATH = os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl')
 
-# --- 1. NẠP DỮ LIỆU ---
 print(f"--- PHÂN TÍCH CHỦ ĐỀ (K={K_VALUE}) ---")
 try:
     vectorizer = pickle.load(open(VECTORIZER_PATH, 'rb'))
@@ -37,7 +35,7 @@ except Exception as e:
     print(f"Lỗi nạp dữ liệu: {e}")
     sys.exit(1)
 
-# --- 2. TÍNH TOÁN ---
+
 # Gán nhãn cụm cho từng bài báo
 df['cluster'] = kmeans.predict(X_lsa)
 # Tính khoảng cách từ bài báo đến các tâm cụm
@@ -50,7 +48,7 @@ svd = lsa_model.named_steps['truncatedsvd']
 centroids_tfidf = svd.inverse_transform(centroids_lsa)
 sorted_term_indices = centroids_tfidf.argsort()[:, ::-1]
 
-# --- 3. IN KẾT QUẢ ---
+
 print("\n--- KẾT QUẢ GÁN NHÃN ---")
 
 for i in range(K_VALUE):

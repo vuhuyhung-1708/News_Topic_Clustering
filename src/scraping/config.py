@@ -1,5 +1,5 @@
 SITES_CONFIG = {
-    # ================= 1. NHÓM ĐÃ CHẠY THÀNH CÔNG (GIỮ NGUYÊN) =================
+   
     "vnexpress": {
         "name": "VnExpress",
         "link_selector": ["h3.title-news a", "h2.title-news a", "article.item-news h3 a"],
@@ -41,9 +41,6 @@ SITES_CONFIG = {
         "article_selectors": { "title": "h1.content-title", "description": "div.content-detail-sapo h2", "content": "div.maincontent-detail p, div.main-content-body p, div#maincontent p" },
         "base_url": "https://vietnamnet.vn"
     },
-
-
-    #new
     "soha": { 
         "name": "Soha",
         "link_selector": ["h3.box-detail-title a", "h3.news-title a", "h3 a"],

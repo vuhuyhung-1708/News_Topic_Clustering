@@ -18,7 +18,7 @@ MATRIX_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'lsa_matrix.pkl')
 FIGURES_DIR = os.path.join(BASE_DIR, 'results', 'figures')
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
-# --- 1. NẠP DỮ LIỆU ---
+#NẠP DỮ LIỆU ---
 print(f"Đang nạp ma trận TF-IDF từ '{MATRIX_PATH}'...")
 try:
     with open(MATRIX_PATH, 'rb') as f:
@@ -28,7 +28,7 @@ except Exception as e:
     print(f"Lỗi khi nạp file: {e}")
     sys.exit(1)
 
-# --- 2. CHẠY VÒNG LẶP ĐÁNH GIÁ ---
+#CHẠY VÒNG LẶP ĐÁNH GIÁ ---
 print(f"\nBắt đầu đánh giá từ K={K_MIN} đến K={K_MAX}...")
 print("Quá trình này có thể mất vài phút, vui lòng đợi...")
 inertia_values = []
@@ -42,7 +42,6 @@ for k in k_range:
     print(f"Đang chạy K = {k:2d}...", end=" ")
     
     # Huấn luyện K-Means
-    # n_init=3 để chạy nhanh hơn. Tăng lên 10 nếu muốn kết quả ổn định hơn nữa.
     kmeans = KMeans(n_clusters=k, random_state=42, n_init=3)
     labels = kmeans.fit_predict(X)
     
@@ -55,7 +54,7 @@ for k in k_range:
 
 print(f"\nHoàn tất đánh giá trong {time.time() - start_time_total:.0f} giây!")
 
-# --- 3. VẼ VÀ LƯU BIỂU ĐỒ ---
+#VẼ VÀ LƯU BIỂU ĐỒ ---
 print("Đang vẽ và lưu biểu đồ...")
 
 # Biểu đồ 1: Elbow Method

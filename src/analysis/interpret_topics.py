@@ -8,19 +8,14 @@ K_VALUE = 34
 
 N_COMPONENTS = 300 # Phải khớp với file feature_extraction.py
 
-# --- ĐƯỜNG DẪN FILE ---
 PROCESSED_DIR = 'data/processed'
 ADVANCED_DIR = os.path.join(PROCESSED_DIR, 'clustered_results') # Thư mục chứa model K-Means LSA
 
-# 1. "Từ điển" TF-IDF gốc (5000 từ)
 VECTORIZER_PATH = os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl') 
-# 2. "Bộ nén" LSA (đã lưu ở bước feature_extraction)
 LSA_MODEL_PATH = os.path.join(PROCESSED_DIR, 'lsa_model.pkl') 
-# 3. "Bộ não" K-Means (đã học trên dữ liệu nén)
 KMEANS_MODEL_PATH = os.path.join(ADVANCED_DIR, f'kmeans_lsa_k{K_VALUE}.pkl') 
 
-# --- 1. NẠP CẢ 3 MODEL ---
-print(f"--- Đang phân tích kết quả cho mô hình LSA K={K_VALUE} ---")
+
 print(f"Nạp từ điển từ: {VECTORIZER_PATH}")
 print(f"Nạp bộ nén LSA từ: {LSA_MODEL_PATH}")
 print(f"Nạp model K-Means từ: {KMEANS_MODEL_PATH}")
@@ -38,18 +33,12 @@ except Exception as e:
     print(f"Lỗi khi nạp file: {e}")
     sys.exit(1)
 
-# --- 2. TRÍCH XUẤT TỪ KHÓA (PHƯƠNG PHÁP LSA) ---
+
 print("\nTrích xuất từ khóa cho từng chủ đề (LSA)...")
 try:
-    # Lấy "cuốn từ điển" (5000 từ) từ TF-IDF
-    terms = vectorizer.get_feature_names_out()
-    
-    # Lấy tâm cụm (centroids) từ K-Means. 
-    # Chúng đang ở dạng nén (300 chiều)
-    centroids_lsa = kmeans.cluster_centers_
-
-    
-    # Lấy mô hình SVD từ bên trong pipeline LSA
+    # Lấy data TF-IDF
+    terms = vectorizer.get_feature_names_out() 
+    centroids_lsa = kmeans.cluster_centers_ 
     svd = lsa_model.named_steps['truncatedsvd']
     
     # Biến đổi ngược các tâm cụm 300 chiều về lại không gian TF-IDF 5000 chiều
