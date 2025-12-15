@@ -114,9 +114,9 @@ if __name__ == '__main__':
     print("-" * 50)
 
     # CẤU HÌNH AN TOÀN
-    MAX_ARTICLES_PER_CATEGORY = 50 # Giới hạn số bài báo MỚI cào mỗi lần
-    MAX_WORKERS = 5 # Giảm số luồng song song xuống 5 (an toàn hơn)
-    SLEEP_TIME = 0.5 # Thời gian nghỉ giữa mỗi yêu cầu (an toàn hơn)
+    MAX_ARTICLES_PER_CATEGORY = 70 # Giới hạn số bài báo MỚI cào mỗi lần
+    MAX_WORKERS = 3 # Giảm số luồng song song xuống 5 (an toàn hơn)
+    SLEEP_TIME = 2.5 # Thời gian nghỉ giữa mỗi yêu cầu (an toàn hơn)
 
     for i, category_url in enumerate(category_urls):
         print(f"\nĐang xử lý link {i+1}/{len(category_urls)}: {category_url}")

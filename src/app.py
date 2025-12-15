@@ -4,6 +4,8 @@ import pickle
 import os
 import re
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
 from underthesea import word_tokenize
 
 # --- CẤU HÌNH TRANG ---
@@ -16,65 +18,22 @@ st.markdown("""
         background-color: #ffffff;
         padding: 25px;
         border-radius: 12px;
-        border-left: 6px solid #ff4b4b;
+        border-left: 8px solid #d32f2f;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         margin-bottom: 25px;
         transition: transform 0.2s;
     }
-    .top-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-    }
-    .top-rank {
-        font-size: 20px; 
-        font-weight: 800; 
-        color: #d32f2f;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-        letter-spacing: 1px;
-    }
-    .top-title {
-        font-size: 24px;
-        font-weight: bold;
-        color: #1a237e;
-        margin: 12px 0;
-        line-height: 1.3;
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    }
-    .keywords-box {
-        background-color: #f1f8e9;
-        border: 1px solid #c5e1a5;
-        color: #33691e;
-        padding: 8px 12px;
-        border-radius: 5px;
-        font-size: 14px;
-        margin-top: 10px;
-        display: inline-block;
-    }
-    .hot-badge {
-        background-color: #ffebee;
-        color: #b71c1c;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: bold;
-        border: 1px solid #ffcdd2;
-        display: inline-block;
-        margin-top: 15px;
-    }
-    /* Style cho danh sách bài báo liên quan */
-    .related-list {
-        margin-top: 10px;
-        padding-left: 10px;
-    }
-    .related-item {
-        padding: 6px 0;
-        border-bottom: 1px solid #f0f0f0;
-        font-size: 15px;
-    }
-    .related-item:last-child {
-        border-bottom: none;
-    }
+    .top-card:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+    .top-rank { font-size: 24px; font-weight: 900; color: #d32f2f; text-transform: uppercase; margin-bottom: 8px; }
+    .top-title { font-size: 26px; font-weight: bold; color: #1a237e; margin: 12px 0; line-height: 1.3; }
+    .keywords-box { background-color: #f1f8e9; border: 1px solid #c5e1a5; color: #33691e; padding: 10px 15px; border-radius: 8px; font-size: 15px; margin-top: 15px; display: inline-block; }
+    .hot-badge { background-color: #ffebee; color: #b71c1c; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; border: 1px solid #ffcdd2; display: inline-block; margin-top: 15px; }
+    .related-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 16px; }
+    
+    /* Style cho kết quả check link */
+    .check-result-success { background-color: #e8f5e9; padding: 15px; border-radius: 10px; border: 1px solid #4caf50; color: #2e7d32; font-weight: bold; }
+    .check-result-fail { background-color: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ff9800; color: #ef6c00; font-weight: bold; }
+    
     a { text-decoration: none; color: #1565C0; }
     a:hover { text-decoration: underline; color: #d32f2f; }
 </style>
@@ -113,6 +72,9 @@ def load_data_and_models():
         lsa = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_model.pkl'), 'rb'))
         km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_two_stage.pkl'), 'rb'))
         
+        with open(os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl'), 'rb') as f:
+            lsa_matrix = pickle.load(f)
+
         stopwords_path = os.path.join(ASSETS_DIR, 'stopwords', 'vietnamese-stopwords.txt')
         sw = set()
         if os.path.exists(stopwords_path):
@@ -125,25 +87,51 @@ def load_data_and_models():
             df = df.dropna(subset=['processed_content'])
             df = df[df['processed_content'].str.strip() != '']
             df.reset_index(drop=True, inplace=True)
-            
-            corpus = df['processed_content'].tolist()
-            vec_tfidf = vec.transform(corpus)
-            matrix = lsa.transform(vec_tfidf)
         else:
             df = None
-            matrix = None
-
-        return vec, lsa, km, sw, df, matrix
+        
+        return vec, lsa, km, sw, df, lsa_matrix
     except Exception as e:
         st.error(f"Lỗi nạp dữ liệu: {e}")
         return None, None, None, None, None, None
 
 vectorizer, lsa_model, kmeans, stopwords, df_data, lsa_matrix = load_data_and_models()
 
-# --- 2. HÀM TÍNH TOÁN TOP TRENDING ---
+# --- 2. HÀM XỬ LÝ & LẤY DỮ LIỆU TỪ LINK ---
+def preprocess_text(text, stopwords):
+    if not text: return ""
+    text = str(text).lower()
+    text = re.sub(r'https?://[^\s\n\r]+', '', text)
+    text = re.sub(r'[^a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    try:
+        tokens = word_tokenize(text, format="text").split()
+    except:
+        tokens = text.split()
+    return ' '.join([w for w in tokens if w not in stopwords and len(w) > 1])
+
+def fetch_content_from_url(url):
+    """Hàm cào nhanh nội dung từ URL dùng requests và BeautifulSoup"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            # Lấy tiêu đề
+            title = soup.title.string if soup.title else ""
+            # Lấy nội dung từ thẻ p (thường chứa nội dung bài báo)
+            paragraphs = soup.find_all('p')
+            content = " ".join([p.text for p in paragraphs])
+            return title + " " + content
+        else:
+            return None
+    except:
+        return None
+
+# --- 3. HÀM TÍNH TOÁN TRENDING ---
 @st.cache_data
 def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
-    if _df is None: return []
+    if _df is None: return [], []
     
     distances = _kmeans.transform(_matrix)
     terms = _vectorizer.get_feature_names_out()
@@ -152,41 +140,36 @@ def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
     cluster_counts = _df['cluster'].value_counts().sort_values(ascending=False)
     
     trending_list = []
+    top_cluster_ids = [] # Lưu danh sách ID top để check
     
     for cluster_id, count in cluster_counts.head(10).items():
-        # Lấy từ khóa
+        top_cluster_ids.append(cluster_id)
+        
         top_k_idx = ordered_centroids[cluster_id, :8]
         keywords = [terms[i] for i in top_k_idx]
         
-        # Tìm bài báo đại diện
         indices = _df.index[_df['cluster'] == cluster_id].tolist()
         dists = distances[indices, cluster_id]
         sorted_idx = np.argsort(dists)
         
         rep_title = "Đang cập nhật..."
         rep_link = "#"
-        related_articles = [] # Danh sách 10 bài báo liên quan
+        related_articles = []
         
         valid_count = 0
-        # Lấy top 30 bài gần nhất để chọn lọc
-        for idx in sorted_idx[:40]: 
+        for idx in sorted_idx[:40]:
             real_idx = indices[idx]
             row = _df.loc[real_idx]
             title = str(row['title']).strip()
-            
             if title.lower() != 'không tìm thấy' and len(title) > 10:
                 if valid_count == 0:
-                    # Bài đầu tiên là bài đại diện chính
                     rep_title = title
                     rep_link = row['url']
                 else:
-                    # Các bài tiếp theo thêm vào danh sách liên quan
                     if len(related_articles) < 10:
                         related_articles.append({'title': title, 'url': row['url']})
-                
                 valid_count += 1
-                if len(related_articles) >= 10: # Đủ 10 bài thì dừng
-                    break
+                if len(related_articles) >= 10: break
         
         trending_list.append({
             'id': cluster_id,
@@ -196,27 +179,75 @@ def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
             'keywords': ", ".join(keywords),
             'related': related_articles
         })
-        
-    return trending_list
+    return trending_list, top_cluster_ids
 
-# --- 3. GIAO DIỆN CHÍNH ---
-# Header
+# --- 4. GIAO DIỆN CHÍNH ---
+
+# Lấy dữ liệu trending trước để có danh sách Top IDs
+trending_topics = []
+top_ids = []
+if df_data is not None:
+    trending_topics, top_ids = get_trending_topics(df_data, lsa_matrix, kmeans, vectorizer, lsa_model)
+
+# === SIDEBAR: CÔNG CỤ CHECK TREND ===
+with st.sidebar:
+    st.header("🔗 Kiểm tra Link Bài báo")
+    st.info("Dán link bài báo mới vào đây để xem nó có thuộc chủ đề đang HOT không.")
+    
+    input_url = st.text_input("Nhập đường dẫn (URL):")
+    
+    if st.button("Kiểm tra ngay", type="primary"):
+        if input_url and vectorizer:
+            with st.spinner("Đang cào dữ liệu và phân tích..."):
+                # B1: Lấy nội dung từ Link
+                raw_content = fetch_content_from_url(input_url)
+                
+                if raw_content and len(raw_content) > 50:
+                    # B2: Tiền xử lý & Dự đoán
+                    processed = preprocess_text(raw_content, stopwords)
+                    vec = vectorizer.transform([processed])
+                    vec_lsa = lsa_model.transform(vec)
+                    c_id = kmeans.predict(vec_lsa)[0]
+                    c_name = TOPIC_NAMES.get(c_id, f"Chủ đề {c_id}")
+                    
+                    # B3: Kiểm tra xem có trong Top 10 không
+                    if c_id in top_ids:
+                        st.markdown(f"""
+                        <div class="check-result-success">
+                            ✅ BÀI NÀY ĐANG HOT!<br>
+                            Thuộc chủ đề: <b>{c_name}</b><br>
+                            (Nằm trong Top 10 chủ đề nổi bật)
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class="check-result-fail">
+                            ⚠️ KHÔNG THUỘC TREND HOT.<br>
+                            Thuộc chủ đề: <b>{c_name}</b><br>
+                            (Chủ đề này hiện ít được quan tâm)
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.error("❌ Không lấy được nội dung từ link này. Vui lòng kiểm tra lại đường dẫn hoặc trang web chặn bot.")
+        elif not input_url:
+            st.warning("Vui lòng nhập đường dẫn!")
+
+    st.markdown("---")
+    st.caption("Sinh viên: Vũ Huy Hưng")
+
+# === MAIN CONTENT: TOP TRENDING ===
 st.markdown("<h1 style='text-align: center; color: #d32f2f;'>🔥 CÁC CHỦ ĐỀ TIN TỨC NỔI BẬT NHẤT 🔥</h1>", unsafe_allow_html=True)
-st.markdown(f"<p style='text-align: center; font-size: 18px; color: #555;'>Hệ thống tự động tổng hợp và phân tích từ <b>{len(df_data)}</b> bài báo mới nhất</p>", unsafe_allow_html=True)
+if df_data is not None:
+    st.markdown(f"<p style='text-align: center; font-size: 18px; color: #555;'>Hệ thống tự động tổng hợp và phân tích từ <b>{len(df_data)}</b> bài báo mới nhất</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Hiển thị danh sách
 col_spacer1, col_content, col_spacer2 = st.columns([1, 6, 1])
 
 with col_content:
-    if df_data is not None:
-        with st.spinner("Đang phân tích dữ liệu nóng..."):
-            trending_topics = get_trending_topics(df_data, lsa_matrix, kmeans, vectorizer, lsa_model)
-        
+    if trending_topics:
         for i, topic in enumerate(trending_topics):
             topic_real_name = TOPIC_NAMES.get(topic['id'], f"Chủ đề {topic['id']}")
             
-            # HIỂN THỊ THẺ CHỦ ĐỀ
             st.markdown(f"""
             <div class="top-card">
                 <div class="top-rank">TOP {i+1} &nbsp; {topic_real_name}</div>
@@ -233,7 +264,6 @@ with col_content:
                 </div>
             """, unsafe_allow_html=True)
             
-            # PHẦN MỞ RỘNG: 10 BÀI BÁO LIÊN QUAN
             with st.expander(f"📄 Xem thêm 10 bài báo tiêu biểu khác về chủ đề này"):
                 st.markdown('<div class="related-list">', unsafe_allow_html=True)
                 if topic['related']:
@@ -247,12 +277,11 @@ with col_content:
                     st.write("Chưa có thêm bài báo liên quan.")
                 st.markdown('</div>', unsafe_allow_html=True)
             
-            st.markdown("</div>", unsafe_allow_html=True) # Đóng thẻ top-card
+            st.markdown("</div>", unsafe_allow_html=True)
             st.write("") 
-            
     else:
-        st.error("Không tìm thấy dữ liệu. Vui lòng kiểm tra lại.")
+        st.error("Không tìm thấy dữ liệu. Vui lòng kiểm tra lại thư mục data.")
 
 # Footer
 st.markdown("---")
-st.caption("Đồ án Tốt nghiệp | Sinh viên: Vũ Huy Hưng | GVHD: TS. Nguyễn Mạnh Hiển")
+st.caption("Đồ án Tốt nghiệp | GVHD: TS. Nguyễn Mạnh Hiển")
