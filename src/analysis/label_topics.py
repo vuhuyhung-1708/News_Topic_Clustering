@@ -6,9 +6,9 @@ import numpy as np
 
 # --- CẤU HÌNH ---
 # Số lượng bài báo đại diện muốn in ra
-N_REPRESENTATIVES = 1 
+N_REPRESENTATIVES = 4
 # Số lượng từ khóa muốn in ra
-N_KEYWORDS = 15
+N_KEYWORDS = 30
 
 # --- THIẾT LẬP ĐƯỜNG DẪN (Tự động tìm theo vị trí file) ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

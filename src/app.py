@@ -45,23 +45,42 @@ PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'two_stage_results')
 ASSETS_DIR = os.path.join(BASE_DIR, 'src', 'assets')
 
-# --- BẢN ĐỒ TÊN CHỦ ĐỀ ---
+# --- BẢN ĐỒ TÊN CHỦ ĐỀ (CẬP NHẬT MỚI NHẤT CHO DATA 9000 BÀI) ---
 TOPIC_NAMES = {
-    1: "Du lịch & Hàng không", 4: "Giáo dục & Đào tạo", 5: "Bóng đá & Thể thao",
-    12: "Bất động sản & Đầu tư", 26: "Chính trị & Công tác cán bộ", 7: "Thị trường Ô tô - Xe máy",
-    23: "Thể thao & Giải đấu (Esports/Tennis)", 30: "Kinh tế & Phát triển Doanh nghiệp",
-    25: "Thiên tai & Bão lũ", 21: "Pháp luật & An ninh trật tự", 14: "Y tế - Điều trị & Ung thư",
-    10: "Đời sống dân sinh & Xã hội", 19: "Chiến sự Nga - Ukraine & Quốc tế", 11: "Văn học & Sách",
-    6: "Công nghệ (Smartphone / Thiết bị số)", 2: "Giải trí & Điện ảnh / Hoa hậu",
-    22: "Tài chính - Ngân hàng / Lãi suất", 16: "Thị trường Vàng & Tài chính",
-    3: "Chính trị Quốc tế (Mỹ - Trung)", 13: "Kiến trúc & Không gian sống",
-    32: "Y tế - Dinh dưỡng & Sức khỏe", 33: "Thời trang & Phong cách",
-    15: "Tài chính Doanh nghiệp (Lợi nhuận)", 24: "Văn hóa & Nghệ thuật",
-    27: "Thi cử & Tuyển sinh", 8: "Chính sách Y tế & Bệnh viện",
-    31: "Thị trường Chứng khoán", 20: "Giao thông & An toàn đường bộ",
-    18: "Đất đai & Pháp lý BĐS", 17: "Ẩm thực & Địa điểm ăn uống",
-    9: "Vụ án & Tội phạm (Ma túy/Lừa đảo)", 29: "Bóng đá Quốc tế & FIFA",
-    0: "Pháp luật (Xét xử/Tham nhũng)", 28: "Đời sống & Xã hội (Chuyện lạ)",
+    29: "Đời sống & Không gian sống",
+    8: "Kinh tế & Phát triển Doanh nghiệp",
+    9: "Pháp luật & Vụ án Hình sự",
+    23: "Bất động sản & Quy hoạch Đô thị",
+    20: "Chính trị & Hành chính công",
+    30: "Thiên tai & Bão lũ (Miền Trung)",
+    11: "Văn học & Sách",
+    18: "Tài chính & Thị trường Chứng khoán",
+    16: "Ẩm thực & Dinh dưỡng Sức khỏe",
+    13: "Ngân hàng & Cảnh báo lừa đảo",
+    17: "Điện ảnh & Nghệ sĩ Showbiz",
+    12: "Bóng đá Việt Nam & AFF Cup",
+    32: "Y tế & Điều trị lâm sàng",
+    33: "Thị trường Ô tô & Xe độ",
+    1: "Hàng không & Quân sự",
+    31: "Bóng đá Quốc tế (Châu Âu)",
+    5: "Giáo dục Phổ thông & Trường học",
+    2: "Giáo dục Đại học & Nghiên cứu AI",
+    7: "Thời sự Quốc tế (Nga - Ukraine)",
+    22: "Âm nhạc & Giải trí",
+    15: "Du lịch & Trải nghiệm",
+    24: "Chính trị Quốc tế (Mỹ - Trung)",
+    4: "Hôn nhân & Gia đình",
+    3: "Thể thao khu vực (SEA Games)",
+    10: "Công nghệ & Thiết bị số (Android/Laptop)",
+    27: "Giáo dục & Tuyển sinh (Thi cử)",
+    14: "Giao thông & An toàn đường bộ",
+    25: "Y tế dự phòng & Dịch bệnh",
+    26: "Thời trang & Phong cách",
+    6: "Công nghệ (Hệ sinh thái Apple)",
+    21: "Xe điện & Xu hướng Xanh (VinFast)",
+    28: "Thị trường Vàng & Ngoại tệ",
+    0: "Sự cố Cháy nổ & Khoa học Vũ trụ",
+    19: "Y tế - Ung thư học"
 }
 
 # --- 1. HÀM NẠP DỮ LIỆU & MODEL ---

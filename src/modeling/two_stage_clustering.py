@@ -13,8 +13,6 @@ MIN_SAMPLES_VALUE = 5
 # 2. Tham số K-Means (để phân cụm dữ liệu sạch)
 # Lưu ý: Vì dữ liệu đã ít đi (do lọc nhiễu), bạn có thể giảm K xuống một chút
 K_VALUE = 34
-
-# --- ĐƯỜNG DẪN ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 MATRIX_PATH = os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl')
