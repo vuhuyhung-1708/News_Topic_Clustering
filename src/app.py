@@ -2,11 +2,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
-import re
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
-from underthesea import word_tokenize
 
 # --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Hot News Detection", page_icon="🔥", layout="wide")
@@ -30,10 +26,6 @@ st.markdown("""
     .hot-badge { background-color: #ffebee; color: #b71c1c; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; border: 1px solid #ffcdd2; display: inline-block; margin-top: 15px; }
     .related-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 16px; }
     
-    /* Style cho kết quả check link */
-    .check-result-success { background-color: #e8f5e9; padding: 15px; border-radius: 10px; border: 1px solid #4caf50; color: #2e7d32; font-weight: bold; }
-    .check-result-fail { background-color: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ff9800; color: #ef6c00; font-weight: bold; }
-    
     a { text-decoration: none; color: #1565C0; }
     a:hover { text-decoration: underline; color: #d32f2f; }
 </style>
@@ -43,9 +35,8 @@ st.markdown("""
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'two_stage_results')
-ASSETS_DIR = os.path.join(BASE_DIR, 'src', 'assets')
 
-# --- BẢN ĐỒ TÊN CHỦ ĐỀ (CẬP NHẬT MỚI NHẤT CHO DATA 9000 BÀI) ---
+# --- BẢN ĐỒ TÊN CHỦ ĐỀ ---
 TOPIC_NAMES = {
     29: "Đời sống & Không gian sống",
     8: "Kinh tế & Phát triển Doanh nghiệp",
@@ -87,18 +78,13 @@ TOPIC_NAMES = {
 @st.cache_resource
 def load_data_and_models():
     try:
+        # Vẫn cần load vectorizer và lsa_model để lấy keywords (get_feature_names_out)
         vec = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl'), 'rb'))
         lsa = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_model.pkl'), 'rb'))
         km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_two_stage.pkl'), 'rb'))
         
         with open(os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl'), 'rb') as f:
             lsa_matrix = pickle.load(f)
-
-        stopwords_path = os.path.join(ASSETS_DIR, 'stopwords', 'vietnamese-stopwords.txt')
-        sw = set()
-        if os.path.exists(stopwords_path):
-            with open(stopwords_path, 'r', encoding='utf-8') as f:
-                sw = set(line.strip() for line in f)
 
         df_path = os.path.join(TWO_STAGE_DIR, 'two_stage_clusters.csv')
         if os.path.exists(df_path):
@@ -109,48 +95,17 @@ def load_data_and_models():
         else:
             df = None
         
-        return vec, lsa, km, sw, df, lsa_matrix
+        return vec, lsa, km, df, lsa_matrix
     except Exception as e:
         st.error(f"Lỗi nạp dữ liệu: {e}")
-        return None, None, None, None, None, None
+        return None, None, None, None, None
 
-vectorizer, lsa_model, kmeans, stopwords, df_data, lsa_matrix = load_data_and_models()
+vectorizer, lsa_model, kmeans, df_data, lsa_matrix = load_data_and_models()
 
-# --- 2. HÀM XỬ LÝ & LẤY DỮ LIỆU TỪ LINK ---
-def preprocess_text(text, stopwords):
-    if not text: return ""
-    text = str(text).lower()
-    text = re.sub(r'https?://[^\s\n\r]+', '', text)
-    text = re.sub(r'[^a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]', ' ', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    try:
-        tokens = word_tokenize(text, format="text").split()
-    except:
-        tokens = text.split()
-    return ' '.join([w for w in tokens if w not in stopwords and len(w) > 1])
-
-def fetch_content_from_url(url):
-    """Hàm cào nhanh nội dung từ URL dùng requests và BeautifulSoup"""
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-        response = requests.get(url, headers=headers, timeout=5)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            # Lấy tiêu đề
-            title = soup.title.string if soup.title else ""
-            # Lấy nội dung từ thẻ p (thường chứa nội dung bài báo)
-            paragraphs = soup.find_all('p')
-            content = " ".join([p.text for p in paragraphs])
-            return title + " " + content
-        else:
-            return None
-    except:
-        return None
-
-# --- 3. HÀM TÍNH TOÁN TRENDING ---
+# --- 2. HÀM TÍNH TOÁN TRENDING (GIỮ NGUYÊN ĐỂ HIỂN THỊ DASHBOARD) ---
 @st.cache_data
 def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
-    if _df is None: return [], []
+    if _df is None: return []
     
     distances = _kmeans.transform(_matrix)
     terms = _vectorizer.get_feature_names_out()
@@ -159,11 +114,8 @@ def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
     cluster_counts = _df['cluster'].value_counts().sort_values(ascending=False)
     
     trending_list = []
-    top_cluster_ids = [] # Lưu danh sách ID top để check
     
     for cluster_id, count in cluster_counts.head(10).items():
-        top_cluster_ids.append(cluster_id)
-        
         top_k_idx = ordered_centroids[cluster_id, :8]
         keywords = [terms[i] for i in top_k_idx]
         
@@ -198,66 +150,32 @@ def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
             'keywords': ", ".join(keywords),
             'related': related_articles
         })
-    return trending_list, top_cluster_ids
+    return trending_list
 
-# --- 4. GIAO DIỆN CHÍNH ---
+# --- 3. GIAO DIỆN CHÍNH ---
 
-# Lấy dữ liệu trending trước để có danh sách Top IDs
+# Lấy dữ liệu trending
 trending_topics = []
-top_ids = []
 if df_data is not None:
-    trending_topics, top_ids = get_trending_topics(df_data, lsa_matrix, kmeans, vectorizer, lsa_model)
+    trending_topics = get_trending_topics(df_data, lsa_matrix, kmeans, vectorizer, lsa_model)
 
-# === SIDEBAR: CÔNG CỤ CHECK TREND ===
+# === SIDEBAR: THÔNG TIN CHUNG ===
 with st.sidebar:
-    st.header("🔗 Kiểm tra Link Bài báo")
-    st.info("Dán link bài báo mới vào đây để xem nó có thuộc chủ đề đang HOT không.")
+    st.image("https://cdn-icons-png.flaticon.com/512/2965/2965879.png", width=80)
+    st.title("Hot News Detection")
+    st.info("Hệ thống tự động phát hiện và phân cụm các chủ đề tin tức nổi bật.")
     
-    input_url = st.text_input("Nhập đường dẫn (URL):")
+    if df_data is not None:
+        st.metric(label="Tổng số bài báo", value=f"{len(df_data):,}")
     
-    if st.button("Kiểm tra ngay", type="primary"):
-        if input_url and vectorizer:
-            with st.spinner("Đang cào dữ liệu và phân tích..."):
-                # B1: Lấy nội dung từ Link
-                raw_content = fetch_content_from_url(input_url)
-                
-                if raw_content and len(raw_content) > 50:
-                    # B2: Tiền xử lý & Dự đoán
-                    processed = preprocess_text(raw_content, stopwords)
-                    vec = vectorizer.transform([processed])
-                    vec_lsa = lsa_model.transform(vec)
-                    c_id = kmeans.predict(vec_lsa)[0]
-                    c_name = TOPIC_NAMES.get(c_id, f"Chủ đề {c_id}")
-                    
-                    # B3: Kiểm tra xem có trong Top 10 không
-                    if c_id in top_ids:
-                        st.markdown(f"""
-                        <div class="check-result-success">
-                            ✅ BÀI NÀY ĐANG HOT!<br>
-                            Thuộc chủ đề: <b>{c_name}</b><br>
-                            (Nằm trong Top 10 chủ đề nổi bật)
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div class="check-result-fail">
-                            ⚠️ KHÔNG THUỘC TREND HOT.<br>
-                            Thuộc chủ đề: <b>{c_name}</b><br>
-                            (Chủ đề này hiện ít được quan tâm)
-                        </div>
-                        """, unsafe_allow_html=True)
-                else:
-                    st.error("❌ Không lấy được nội dung từ link này. Vui lòng kiểm tra lại đường dẫn hoặc trang web chặn bot.")
-        elif not input_url:
-            st.warning("Vui lòng nhập đường dẫn!")
-
     st.markdown("---")
     st.caption("Sinh viên: Vũ Huy Hưng")
+    st.caption("Đồ án Tốt nghiệp")
 
 # === MAIN CONTENT: TOP TRENDING ===
 st.markdown("<h1 style='text-align: center; color: #d32f2f;'>🔥 CÁC CHỦ ĐỀ TIN TỨC NỔI BẬT NHẤT 🔥</h1>", unsafe_allow_html=True)
 if df_data is not None:
-    st.markdown(f"<p style='text-align: center; font-size: 18px; color: #555;'>Hệ thống tự động tổng hợp và phân tích từ <b>{len(df_data)}</b> bài báo mới nhất</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center; font-size: 18px; color: #555;'>Dữ liệu được cập nhật và phân tích tự động</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 col_spacer1, col_content, col_spacer2 = st.columns([1, 6, 1])

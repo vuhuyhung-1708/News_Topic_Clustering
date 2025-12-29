@@ -9,7 +9,7 @@ import time
 
 #vẽ 2 biểu đồ 
 K_MIN = 5
-K_MAX = 200
+K_MAX = 50
 STEP = 1
 
 # Thiết lập đường dẫn (đi ngược 3 cấp từ file này ra thư mục gốc)
