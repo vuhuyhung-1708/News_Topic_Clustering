@@ -13,17 +13,17 @@ N_KEYWORDS = 30
 # --- THIẾT LẬP ĐƯỜNG DẪN (Tự động tìm theo vị trí file) ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
-TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'two_stage_results')
+TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'main_clustered_results')
 
 # 1. Các file Model (Dùng để biến đổi văn bản)
 VECTORIZER_PATH = os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl')
 LSA_MODEL_PATH = os.path.join(PROCESSED_DIR, 'lsa_model.pkl')
 
 # 2. File Model K-Means (Của quy trình 2 giai đoạn)
-KMEANS_MODEL_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_two_stage.pkl')
+KMEANS_MODEL_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_model_k30.pkl')
 
 # 3. File Dữ liệu SẠCH (Quan trọng: Dùng file này thay vì file gốc)
-CLEAN_CSV_PATH = os.path.join(TWO_STAGE_DIR, 'two_stage_clusters.csv')
+CLEAN_CSV_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k30.csv')
 
 # --- 1. NẠP DỮ LIỆU ---
 print(f"--- PHÂN TÍCH CHỦ ĐỀ NỔI BẬT (TWO-STAGE CLUSTERING) ---")
@@ -55,8 +55,7 @@ except Exception as e:
     print(f"Lỗi nạp dữ liệu: {e}")
     sys.exit(1)
 
-# --- 2. TÁI TẠO VECTOR CHO DỮ LIỆU SẠCH ---
-# Bước này cực quan trọng: Biến đổi dữ liệu sạch về dạng vector để tính khoảng cách tới tâm cụm.
+
 print("Đang vector hóa lại dữ liệu sạch để tính khoảng cách (vui lòng đợi)...")
 try:
     corpus_clean = df_clean['processed_content'].tolist()

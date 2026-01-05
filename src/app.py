@@ -34,61 +34,46 @@ st.markdown("""
 # --- ĐƯỜNG DẪN ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
-TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'two_stage_results')
+TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'main_clustered_results')
 
-# --- BẢN ĐỒ TÊN CHỦ ĐỀ ---
+# --- BẢN ĐỒ TÊN CHỦ ĐỀ (GIỮ NGUYÊN) ---
 TOPIC_NAMES = {
-    29: "Đời sống & Không gian sống",
-    8: "Kinh tế & Phát triển Doanh nghiệp",
-    9: "Pháp luật & Vụ án Hình sự",
-    23: "Bất động sản & Quy hoạch Đô thị",
-    20: "Chính trị & Hành chính công",
-    30: "Thiên tai & Bão lũ (Miền Trung)",
-    11: "Văn học & Sách",
-    18: "Tài chính & Thị trường Chứng khoán",
-    16: "Ẩm thực & Dinh dưỡng Sức khỏe",
-    13: "Ngân hàng & Cảnh báo lừa đảo",
-    17: "Điện ảnh & Nghệ sĩ Showbiz",
-    12: "Bóng đá Việt Nam & AFF Cup",
-    32: "Y tế & Điều trị lâm sàng",
-    33: "Thị trường Ô tô & Xe độ",
-    1: "Hàng không & Quân sự",
-    31: "Bóng đá Quốc tế (Châu Âu)",
-    5: "Giáo dục Phổ thông & Trường học",
-    2: "Giáo dục Đại học & Nghiên cứu AI",
-    7: "Thời sự Quốc tế (Nga - Ukraine)",
-    22: "Âm nhạc & Giải trí",
-    15: "Du lịch & Trải nghiệm",
-    24: "Chính trị Quốc tế (Mỹ - Trung)",
-    4: "Hôn nhân & Gia đình",
-    3: "Thể thao khu vực (SEA Games)",
-    10: "Công nghệ & Thiết bị số (Android/Laptop)",
-    27: "Giáo dục & Tuyển sinh (Thi cử)",
-    14: "Giao thông & An toàn đường bộ",
-    25: "Y tế dự phòng & Dịch bệnh",
-    26: "Thời trang & Phong cách",
-    6: "Công nghệ (Hệ sinh thái Apple)",
-    21: "Xe điện & Xu hướng Xanh (VinFast)",
-    28: "Thị trường Vàng & Ngoại tệ",
-    0: "Sự cố Cháy nổ & Khoa học Vũ trụ",
-    19: "Y tế - Ung thư học"
+    # --- TOP 10 CHỦ ĐỀ LỚN NHẤT ---
+    29: "Đời sống & Xã hội",          
+    8:  "Kinh tế & Doanh nghiệp",    
+    27: "Giáo dục & Thi cử",          
+    9:  "Pháp luật & Hình sự",        
+    12: "Thể thao",           
+    23: "Bất động sản",               
+    20: "Chính trị",                 
+    21: "Ô tô & Xe máy",              
+    5:  "Bão lũ & Thiên tai",        
+    13: "Tài chính & Ngân hàng",      
+
 }
 
 # --- 1. HÀM NẠP DỮ LIỆU & MODEL ---
 @st.cache_resource
 def load_data_and_models():
     try:
-        # Vẫn cần load vectorizer và lsa_model để lấy keywords (get_feature_names_out)
         vec = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl'), 'rb'))
         lsa = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_model.pkl'), 'rb'))
-        km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_two_stage.pkl'), 'rb'))
+        
+        # Đọc model K=34
+        km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_model_k30.pkl'), 'rb'))
         
         with open(os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl'), 'rb') as f:
             lsa_matrix = pickle.load(f)
 
-        df_path = os.path.join(TWO_STAGE_DIR, 'two_stage_clusters.csv')
+        # Đọc file CSV K=34
+        df_path = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k30.csv')
         if os.path.exists(df_path):
             df = pd.read_csv(df_path)
+            
+            # Chuẩn hóa tên cột cluster (nếu file cũ dùng 'cluster')
+            if 'kmeans_cluster' not in df.columns and 'cluster' in df.columns:
+                df = df.rename(columns={'cluster': 'kmeans_cluster'})
+
             df = df.dropna(subset=['processed_content'])
             df = df[df['processed_content'].str.strip() != '']
             df.reset_index(drop=True, inplace=True)
@@ -100,70 +85,99 @@ def load_data_and_models():
         st.error(f"Lỗi nạp dữ liệu: {e}")
         return None, None, None, None, None
 
-vectorizer, lsa_model, kmeans, df_data, lsa_matrix = load_data_and_models()
 
-# --- 2. HÀM TÍNH TOÁN TRENDING (GIỮ NGUYÊN ĐỂ HIỂN THỊ DASHBOARD) ---
-@st.cache_data
-def get_trending_topics(_df, _matrix, _kmeans, _vectorizer, _lsa_model):
-    if _df is None: return []
+# --- 2. HÀM TÍNH TOÁN TRENDING (ĐÃ SỬA LỖI "KHÔNG TÌM THẤY") ---
+# --- HÀM KIỂM TRA BÀI BÁO HỢP LỆ (HELPER FUNCTION) ---
+def is_valid_article(title, url):
+    """Kiểm tra xem bài báo có hợp lệ để hiển thị không."""
+    title = str(title).strip()
+    url = str(url).strip()
+    title_lower = title.lower()
     
-    distances = _kmeans.transform(_matrix)
-    terms = _vectorizer.get_feature_names_out()
-    centroids_tfidf = _lsa_model.named_steps['truncatedsvd'].inverse_transform(_kmeans.cluster_centers_)
-    ordered_centroids = centroids_tfidf.argsort()[:, ::-1]
-    cluster_counts = _df['cluster'].value_counts().sort_values(ascending=False)
+    # Danh sách từ khóa lỗi
+    invalid_keywords = {'nan', 'none', '', 'null', 'không tìm thấy', 'khong tim thay', '404', 'error'}
+    
+    # Các điều kiện kiểm tra
+    if title_lower in invalid_keywords: return False
+    if len(title) < 15: return False
+    if len(url) < 10: return False
+    
+    return True
+
+# --- 2. HÀM TÍNH TOÁN TRENDING (ĐÃ ĐƠN GIẢN HÓA) ---
+def get_trending_topics(df, matrix, kmeans, vectorizer, lsa_model):
+    if df is None: return []
+    
+    # 1. Tính toán trước các thông số cần thiết
+    distances = kmeans.transform(matrix)
+    terms = vectorizer.get_feature_names_out()
+    
+    # Lấy thành phần SVD để giải mã từ khóa
+    svd = lsa_model.named_steps['truncatedsvd'] if hasattr(lsa_model, 'named_steps') else lsa_model
+    original_centroids = svd.inverse_transform(kmeans.cluster_centers_)
+    ordered_centroids = original_centroids.argsort()[:, ::-1]
+    
+    # Lấy Top 10 cụm lớn nhất
+    top_clusters = df['kmeans_cluster'].value_counts().sort_values(ascending=False).head(10)
     
     trending_list = []
     
-    for cluster_id, count in cluster_counts.head(10).items():
-        top_k_idx = ordered_centroids[cluster_id, :8]
-        keywords = [terms[i] for i in top_k_idx]
+    for cluster_id, count in top_clusters.items():
+        # 2. Lấy từ khóa (Keywords)
+        keywords = [terms[i].replace("_", " ") for i in ordered_centroids[cluster_id, :8]]
         
-        indices = _df.index[_df['cluster'] == cluster_id].tolist()
-        dists = distances[indices, cluster_id]
-        sorted_idx = np.argsort(dists)
+        # 3. Lấy và sắp xếp các bài báo trong cụm theo khoảng cách đến tâm
+        indices = df.index[df['kmeans_cluster'] == cluster_id].tolist()
+        cluster_dists = distances[indices, cluster_id]
+        # Lấy index thực của 100 bài gần tâm nhất
+        sorted_indices = [indices[i] for i in np.argsort(cluster_dists)[:100]]
         
-        rep_title = "Đang cập nhật..."
-        rep_link = "#"
-        related_articles = []
+        # 4. Tìm bài đại diện và bài liên quan
+        valid_articles = []
+        seen_titles = set() # Dùng để khử trùng lặp tiêu đề
         
-        valid_count = 0
-        for idx in sorted_idx[:40]:
-            real_idx = indices[idx]
-            row = _df.loc[real_idx]
-            title = str(row['title']).strip()
-            if title.lower() != 'không tìm thấy' and len(title) > 10:
-                if valid_count == 0:
-                    rep_title = title
-                    rep_link = row['url']
-                else:
-                    if len(related_articles) < 10:
-                        related_articles.append({'title': title, 'url': row['url']})
-                valid_count += 1
-                if len(related_articles) >= 10: break
+        for idx in sorted_indices:
+            row = df.loc[idx]
+            title = row.get('title', '')
+            url = row.get('url', '#')
+            
+            if is_valid_article(title, url) and title not in seen_titles:
+                valid_articles.append({'title': title, 'url': url})
+                seen_titles.add(title)
+            
+            # Chỉ cần tìm đủ 11 bài (1 đại diện + 10 liên quan) là dừng
+            if len(valid_articles) >= 11:
+                break
         
-        trending_list.append({
-            'id': cluster_id,
-            'count': count,
-            'rep_title': rep_title,
-            'rep_link': rep_link,
-            'keywords': ", ".join(keywords),
-            'related': related_articles
-        })
+        # 5. Đóng gói kết quả (nếu tìm được ít nhất 1 bài)
+        if valid_articles:
+            trending_list.append({
+                'id': cluster_id,
+                'count': count,
+                'rep_title': valid_articles[0]['title'], # Bài gần nhất làm đại diện
+                'rep_link': valid_articles[0]['url'],
+                'keywords': ", ".join(keywords),
+                'related': valid_articles[1:] # Các bài còn lại làm bài liên quan
+            })
+            
     return trending_list
+
+# --- LOAD DỮ LIỆU ---
+vectorizer, lsa_model, kmeans, df_data, lsa_matrix = load_data_and_models()
 
 # --- 3. GIAO DIỆN CHÍNH ---
 
 # Lấy dữ liệu trending
 trending_topics = []
 if df_data is not None:
+    # Gọi hàm vừa định nghĩa ở trên
     trending_topics = get_trending_topics(df_data, lsa_matrix, kmeans, vectorizer, lsa_model)
 
 # === SIDEBAR: THÔNG TIN CHUNG ===
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2965/2965879.png", width=80)
     st.title("Hot News Detection")
-    st.info("Hệ thống tự động phát hiện và phân cụm các chủ đề tin tức nổi bật.")
+    st.info(f"Mô hình phân cụm: K-Means (K=34)")
     
     if df_data is not None:
         st.metric(label="Tổng số bài báo", value=f"{len(df_data):,}")
@@ -183,6 +197,7 @@ col_spacer1, col_content, col_spacer2 = st.columns([1, 6, 1])
 with col_content:
     if trending_topics:
         for i, topic in enumerate(trending_topics):
+            # Lấy tên chủ đề từ Map
             topic_real_name = TOPIC_NAMES.get(topic['id'], f"Chủ đề {topic['id']}")
             
             st.markdown(f"""

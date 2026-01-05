@@ -1,91 +1,120 @@
-import pickle
-import os
-import sys
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from sklearn.feature_extraction.text import TfidfVectorizer
+import pandas as pd
+import os
+import sys
+import pickle
+import numpy as np
 import time
 
-#vẽ 2 biểu đồ 
-K_MIN = 5
-K_MAX = 50
-STEP = 1
+# --- CẤU HÌNH ---
+K_MIN = 10
+K_MAX = 60
+STEP = 2
 
-# Thiết lập đường dẫn (đi ngược 3 cấp từ file này ra thư mục gốc)
+# --- ĐƯỜNG DẪN ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MATRIX_PATH = os.path.join(BASE_DIR, 'data', 'processed', 'lsa_matrix.pkl')
-FIGURES_DIR = os.path.join(BASE_DIR, 'results', 'figures')
-os.makedirs(FIGURES_DIR, exist_ok=True)
+PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 
-#NẠP DỮ LIỆU ---
-print(f"Đang nạp ma trận TF-IDF từ '{MATRIX_PATH}'...")
-try:
-    with open(MATRIX_PATH, 'rb') as f:
-        X = pickle.load(f)
-    print(f"Nạp thành công! Kích thước dữ liệu: {X.shape}")
-except Exception as e:
-    print(f"Lỗi khi nạp file: {e}")
-    sys.exit(1)
+# Các file Input tiềm năng
+TFIDF_MATRIX_PATH = os.path.join(PROCESSED_DIR, 'tfidf_matrix.pkl')
+LSA_MATRIX_PATH = os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl')
+DATA_PATH = os.path.join(PROCESSED_DIR, 'processed_data.csv')
 
-#CHẠY VÒNG LẶP ĐÁNH GIÁ ---
-print(f"\nBắt đầu đánh giá từ K={K_MIN} đến K={K_MAX}...")
-print("Quá trình này có thể mất vài phút, vui lòng đợi...")
-inertia_values = []
-silhouette_values = []
-k_range = range(K_MIN, K_MAX + 1, STEP)
+# File Output (Lưu vào data/processed)
+PLOT_SAVE_PATH = os.path.join(PROCESSED_DIR, 'silhouette_chart.png')
 
-start_time_total = time.time()
-
-for k in k_range:
-    start_time = time.time()
-    print(f"Đang chạy K = {k:2d}...", end=" ")
+def main():
+    print("--- ĐÁNH GIÁ SILHOUETTE SCORE (VẼ BIỂU ĐỒ) ---")
     
-    # Huấn luyện K-Means
-    kmeans = KMeans(n_clusters=k, random_state=42, n_init=3)
-    labels = kmeans.fit_predict(X)
+    # 1. Nạp dữ liệu Ma trận
+    X = None
+    print("1. Đang tìm và nạp ma trận đầu vào...")
     
-    # Lưu các chỉ số
-    inertia_values.append(kmeans.inertia_)
-    score = silhouette_score(X, labels, random_state=42) # Có thể thêm sample_size=2000 nếu quá chậm
-    silhouette_values.append(score)
+    # Ưu tiên 1: Tìm ma trận TF-IDF
+    if os.path.exists(TFIDF_MATRIX_PATH):
+        print(f"   -> Đã tìm thấy file TF-IDF: {TFIDF_MATRIX_PATH}")
+        with open(TFIDF_MATRIX_PATH, 'rb') as f:
+            X = pickle.load(f)
+
+    # Ưu tiên 2: Tìm ma trận LSA (như ảnh bạn gửi trước đó)
+    elif os.path.exists(LSA_MATRIX_PATH):
+        print(f"   -> Đã tìm thấy file LSA: {LSA_MATRIX_PATH}")
+        with open(LSA_MATRIX_PATH, 'rb') as f:
+            X = pickle.load(f)
+
+    # Fallback: Tính lại từ CSV
+    else:
+        print("   -> ⚠️ Không tìm thấy file ma trận .pkl. Đang tính toán lại từ CSV...")
+        if os.path.exists(DATA_PATH):
+            df = pd.read_csv(DATA_PATH)
+            df = df.dropna(subset=['processed_content'])
+            corpus = df['processed_content'].tolist()
+            vectorizer = TfidfVectorizer(max_features=5000, min_df=5, max_df=0.8)
+            X = vectorizer.fit_transform(corpus)
+        else:
+            print(f"Lỗi: Không tìm thấy dữ liệu gốc tại {DATA_PATH}")
+            return
+
+    print(f"   -> Kích thước ma trận sử dụng: {X.shape}")
+
+    # 2. Tính toán Silhouette Score
+    print(f"\n2. Bắt đầu tính Silhouette từ K={K_MIN} đến K={K_MAX}...")
+    silhouette_values = []
+    k_range = range(K_MIN, K_MAX + 1, STEP)
     
-    print(f"Xong. Silhouette: {score:.4f} | Inertia: {kmeans.inertia_:.0f} ({time.time() - start_time:.1f}s)")
+    start_time_total = time.time()
 
-print(f"\nHoàn tất đánh giá trong {time.time() - start_time_total:.0f} giây!")
+    for k in k_range:
+        try:
+            # n_init=3 để chạy nhanh hơn
+            kmeans = KMeans(n_clusters=k, random_state=42, n_init=3)
+            labels = kmeans.fit_predict(X)
+            
+            # Tính điểm Silhouette
+            score = silhouette_score(X, labels)
+            silhouette_values.append(score)
+            
+            print(f"   -> K={k}: Silhouette Score = {score:.4f}")
+        except Exception as e:
+            print(f"   -> Lỗi tại K={k}: {e}")
+            silhouette_values.append(0)
 
-#VẼ VÀ LƯU BIỂU ĐỒ ---
-print("Đang vẽ và lưu biểu đồ...")
+    print(f"\nHoàn tất tính toán trong {time.time() - start_time_total:.0f} giây!")
 
-# Biểu đồ 1: Elbow Method
-plt.figure(figsize=(10, 6))
-plt.plot(k_range, inertia_values, 'bo-', markersize=8, linewidth=2)
-plt.title(f'Phương pháp Khuỷu tay (Elbow Method) với K từ {K_MIN}-{K_MAX}')
-plt.xlabel('Số cụm (K)')
-plt.ylabel('Inertia (Độ nén)')
-plt.grid(True)
-elbow_path = os.path.join(FIGURES_DIR, 'elbow_method.png')
-plt.savefig(elbow_path)
-plt.close()
+    # 3. Vẽ và Lưu biểu đồ
+    print("3. Đang vẽ biểu đồ Silhouette...")
+    
+    plt.figure(figsize=(12, 6))
+    # Vẽ đường nối các điểm
+    plt.plot(k_range, silhouette_values, 'ro-', linewidth=2, markersize=6, label='Silhouette Score')
+    
+    # Tìm và đánh dấu điểm cao nhất
+    if silhouette_values:
+        best_idx = np.argmax(silhouette_values)
+        best_k = list(k_range)[best_idx]
+        best_score = silhouette_values[best_idx]
+        
+        plt.plot(best_k, best_score, 'b*', markersize=15, label=f'Best K = {best_k}')
+        # Vẽ đường gióng xuống trục X
+        plt.axvline(x=best_k, color='gray', linestyle='--', alpha=0.5)
+        
+        print(f"\n🏆 KẾT LUẬN: Số cụm tối ưu theo Silhouette là K = {best_k} (Score = {best_score:.4f})")
+    
+    plt.title(f'Biểu đồ Silhouette Score theo số cụm K ({K_MIN}–{K_MAX})', fontsize=16)
+    plt.xlabel('Số cụm (K)', fontsize=14)
+    plt.ylabel('Silhouette Score (Càng cao càng tốt)', fontsize=14)
+    plt.grid(True)
+    plt.legend()
 
-# Biểu đồ 2: Silhouette Score
-plt.figure(figsize=(10, 6))
-plt.plot(k_range, silhouette_values, 'rs-', markersize=8, linewidth=2)
-plt.title(f'Chỉ số Silhouette với K từ {K_MIN}-{K_MAX}')
-plt.xlabel('Số cụm (K)')
-plt.ylabel('Silhouette Score (Càng cao càng tốt)')
-plt.grid(True)
-# Đánh dấu điểm cao nhất
-best_k_idx = np.argmax(silhouette_values)
-best_k = k_range[best_k_idx]
-best_score = silhouette_values[best_k_idx]
-plt.axvline(x=best_k, color='g', linestyle='--', label=f'Best K = {best_k}')
-plt.legend()
+    # Lưu biểu đồ vào data/processed
+    plt.savefig(PLOT_SAVE_PATH)
+    plt.close()
+    
+    print(f"✅ Đã lưu biểu đồ thành công tại: {PLOT_SAVE_PATH}")
+    print(f"Hãy kiểm tra thư mục '{PROCESSED_DIR}' để xem ảnh 'silhouette_chart.png'")
 
-silhouette_path = os.path.join(FIGURES_DIR, 'silhouette_score.png')
-plt.savefig(silhouette_path)
-plt.close()
-
-print(f"\nĐã lưu biểu đồ Elbow tại: {elbow_path}")
-print(f"\nĐã lưu biểu đồ Silhouette tại: {silhouette_path}")
-print(f"\nKẾT LUẬN: Theo chỉ số Silhouette, số cụm tối ưu nhất là K = {best_k} (Điểm: {best_score:.4f})")
+if __name__ == "__main__":
+    main()
