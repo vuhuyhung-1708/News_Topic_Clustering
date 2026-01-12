@@ -34,23 +34,40 @@ st.markdown("""
 # --- ĐƯỜNG DẪN ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
-TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'main_clustered_results')
+TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'kmeans_clustered_results')
 
 # --- BẢN ĐỒ TÊN CHỦ ĐỀ (GIỮ NGUYÊN) ---
 TOPIC_NAMES = {
-    # --- TOP 10 CHỦ ĐỀ LỚN NHẤT ---
-    29: "Đời sống & Xã hội",          
-    8:  "Kinh tế & Doanh nghiệp",    
-    27: "Giáo dục & Thi cử",          
-    9:  "Pháp luật & Hình sự",        
-    12: "Thể thao",           
-    23: "Bất động sản",               
-    20: "Chính trị",                 
-    21: "Ô tô & Xe máy",              
-    5:  "Bão lũ & Thiên tai",        
-    13: "Tài chính & Ngân hàng",      
-
+    1:  "Sách & Đọc",
+    3:  "Đời sống – Văn hóa",
+    18: "Công nghệ – Doanh nghiệp",
+    9:  "Chính trị – Phát triển",
+    2:  "Ẩm thực – Đô thị",
+    5:  "Ô tô – Xe máy",
+    10: "Pháp luật – Hình sự",
+    17: "Gia đình – Hôn nhân",
+    6:  "Bóng đá quốc tế",
+    23: "Sức khỏe – Dinh dưỡng",
+    26: "Ngân hàng – Chứng khoán",
+    7:  "Giáo dục – Học đường",
+    19: "Y tế – Bệnh viện",
+    4:  "Du lịch – Trải nghiệm",
+    21: "Điện ảnh – Giải trí",
+    20: "Điện thoại – Công nghệ",
+    8:  "Thời sự quốc tế",
+    27: "Bóng đá châu Á",
+    11: "Âm nhạc – Nghệ sĩ",
+    16: "Xung đột – Địa chính trị",
+    24: "Giao thông – Tai nạn",
+    0:  "Giá vàng – Thị trường",
+    25: "An toàn thực phẩm",
+    12: "Tuyển sinh – Thi cử",
+    15: "Thời trang – Sao",
+    13: "Chiến sự Ukraine",
+    14: "Tham nhũng – Xét xử",
+    22: "Truyện Kiều"
 }
+
 
 # --- 1. HÀM NẠP DỮ LIỆU & MODEL ---
 @st.cache_resource
@@ -60,13 +77,13 @@ def load_data_and_models():
         lsa = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_model.pkl'), 'rb'))
         
         # Đọc model K=34
-        km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_model_k30.pkl'), 'rb'))
+        km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_model_k22.pkl'), 'rb'))
         
         with open(os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl'), 'rb') as f:
             lsa_matrix = pickle.load(f)
 
         # Đọc file CSV K=34
-        df_path = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k30.csv')
+        df_path = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k22.csv')
         if os.path.exists(df_path):
             df = pd.read_csv(df_path)
             
@@ -124,7 +141,7 @@ def get_trending_topics(df, matrix, kmeans, vectorizer, lsa_model):
     
     for cluster_id, count in top_clusters.items():
         # 2. Lấy từ khóa (Keywords)
-        keywords = [terms[i].replace("_", " ") for i in ordered_centroids[cluster_id, :8]]
+        keywords = [terms[i].replace("_", " ") for i in ordered_centroids[cluster_id, :20]]
         
         # 3. Lấy và sắp xếp các bài báo trong cụm theo khoảng cách đến tâm
         indices = df.index[df['kmeans_cluster'] == cluster_id].tolist()

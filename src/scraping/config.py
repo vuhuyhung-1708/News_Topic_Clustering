@@ -91,15 +91,65 @@ SITES_CONFIG = {
         },
         "base_url": "https://danviet.vn"
     },
+  
 
-    "nguoiduatin": { 
-        "name": "Người Đưa Tin",
-        "link_selector": ["div.box-news-content h3 a", "h3 a", "article h3 a"],
-        "article_selectors": { 
-            "title": "h1.art-title", 
-            "description": "div.art-sapo", 
-            "content": "div.art-body p" 
-        },
-        "base_url": "https://nguoiduatin.vn"
-    }
+   "plo": {  # FIXED
+    "name": "Pháp Luật TP.HCM",
+    "link_selector": [
+        "article h3 a",
+        "article h2 a"
+    ],
+    "article_selectors": {
+        "title": "h1.article-title",
+        "description": "div.article-sapo",
+        "content": "div#article-body p"
+    },
+    "base_url": "https://plo.vn"
+},
+
+    "anninhthudo": {  # FIXED
+    "name": "An Ninh Thủ Đô",
+    "link_selector": [
+        "article h3 a",
+        "div.list-news h3 a"
+    ],
+    "article_selectors": {
+        "title": "h1.title",
+        "description": "div.sapo",
+        "content": "div.article-body p"
+    },
+    "base_url": "https://anninhthudo.vn"
+},
+
+  "vneconomy": {  # FIXED
+    "name": "VnEconomy",
+    "link_selector": [
+        "article h3 a",
+        "div.story h3 a"
+    ],
+    "article_selectors": {
+        "title": "h1.title",
+        "description": "div.sapo",
+        "content": "div.detail-content p"
+    },
+    "base_url": "https://vneconomy.vn"
+},
+
+
+    "nld": {  # FIXED
+    "name": "Người Lao Động",
+    "link_selector": [
+        "article h3 a",
+        "div.news-item h3 a"
+    ],
+    "article_selectors": {
+        "title": "h1.title",
+        "description": "div.sapo",
+        "content": "div#contentdetail p"
+    },
+    "base_url": "https://nld.com.vn"
+},
+
+
+    
 }

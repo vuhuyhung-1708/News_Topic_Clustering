@@ -13,19 +13,19 @@ N_KEYWORDS = 30
 # --- THIẾT LẬP ĐƯỜNG DẪN (Tự động tìm theo vị trí file) ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
-TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'main_clustered_results')
+TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'kmeans_clustered_results')
 
 # 1. Các file Model (Dùng để biến đổi văn bản)
 VECTORIZER_PATH = os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl')
 LSA_MODEL_PATH = os.path.join(PROCESSED_DIR, 'lsa_model.pkl')
 
 # 2. File Model K-Means (Của quy trình 2 giai đoạn)
-KMEANS_MODEL_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_model_k30.pkl')
+KMEANS_MODEL_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_model_k28.pkl')
 
 # 3. File Dữ liệu SẠCH (Quan trọng: Dùng file này thay vì file gốc)
-CLEAN_CSV_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k30.csv')
+CLEAN_CSV_PATH = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k28.csv')
 
-# --- 1. NẠP DỮ LIỆU ---
+    # --- 1. NẠP DỮ LIỆU ---
 print(f"--- PHÂN TÍCH CHỦ ĐỀ NỔI BẬT (TWO-STAGE CLUSTERING) ---")
 print("Đang nạp dữ liệu sạch và các model...")
 try:
@@ -117,7 +117,7 @@ for cluster_id, count in cluster_counts.items():
     # 3. In thông tin
     print(f"🔥 TOP {rank}: CHỦ ĐỀ {cluster_id} (Số lượng: {count} bài báo)")
     print(f"   🔑 Từ khóa: {', '.join(top_keywords)}")
-    print(f"   📰 Tiêu đề đại diện: \"{representative_title}\"")
+    print(f"   📰 Bài báo đại diện: \"{representative_title}\"")
     print("-" * 60)
     
     rank += 1
