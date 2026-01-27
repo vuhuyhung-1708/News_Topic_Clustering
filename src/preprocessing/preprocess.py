@@ -12,7 +12,7 @@ data_path = 'data/raw'
 all_csv_files = glob.glob(os.path.join(data_path, "*.csv"))
 
 if not all_csv_files:
-    print(f"Lỗi: Không tìm thấy file CSV nào trong thư mục '{data_path}'. Hãy chạy scraper.py trước.")
+    print(f"Lỗi: Không tìm thấy file CSV nào trong thư mục '{data_path}'")
     sys.exit(1)
 
 list_of_dfs = []
@@ -37,7 +37,7 @@ print("Kiểm tra dữ liệu thiếu (NaN) trước xử lý:")
 print(combined_df.isnull().sum())
 print("-" * 50)
 
-# --- TIỀN XỬ LÝ VĂN BẢN ---
+
 stopwords_path = 'src/preprocessing/assets/vietnamese-stopwords.txt'
 try:
     with open(stopwords_path, 'r', encoding='utf-8') as f:
@@ -45,10 +45,9 @@ try:
         stopwords = set(line.strip() for line in f if line.strip())
     print(f"Đã tải {len(stopwords)} từ dừng từ file: {stopwords_path}")
 except FileNotFoundError:
-    print(f"Cảnh báo: Không tìm thấy file stopwords tại '{stopwords_path}'.")
+    print(f"Không tìm thấy file stopwords tại '{stopwords_path}'.")
     stopwords = set()
 
-# --- HÀM PREPROCESS_TEXT ---
 def preprocess_text(text):
     """Làm sạch văn bản thô: xóa link/email, chuyển chữ thường, xóa ký tự đặc biệt, tách từ, bỏ từ dừng."""
     # 1. Xử lý giá trị NaN
@@ -79,7 +78,6 @@ def preprocess_text(text):
         tokens = text.split() # Tách tạm bằng khoảng trắng nếu underthesea lỗi
 
     # 7. Loại bỏ từ dừng và từ quá ngắn
-    # Giả định 'stopwords' là một set các từ dừng đã được tải
     processed_tokens = [word for word in tokens if word not in stopwords and len(word) > 1]
 
     # 8. Ghép các từ lại thành một chuỗi
@@ -102,7 +100,6 @@ print(f"Đã xóa {initial_rows - final_rows} dòng có nội dung rỗng sau ti
 print("-" * 50)
 
 
-# --- PHẦN 3: LƯU KẾT QUẢ ---
 output_folder = 'data/processed'
 os.makedirs(output_folder, exist_ok=True)
 processed_data_path = os.path.join(output_folder, 'processed_data.csv')

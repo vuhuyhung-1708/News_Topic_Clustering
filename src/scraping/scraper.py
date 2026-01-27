@@ -11,9 +11,9 @@ import random
 from config import SITES_CONFIG
 
 # --- CẤU HÌNH MỞ RỘNG ---
-MAX_PAGES_TO_SCAN = 10       # Số trang danh sách tối đa sẽ quét (VD: quét từ trang 1 -> 15)
-MAX_ARTICLES_PER_CATEGORY = 200  # Tăng giới hạn số bài lấy về (thay vì 70)
-MAX_WORKERS = 10             # Tăng số luồng để tải nhanh hơn
+MAX_PAGES_TO_SCAN = 10       # số trang 
+MAX_ARTICLES_PER_CATEGORY = 200  # giới hạn số lượng tối đa bài báo
+MAX_WORKERS = 10             # số luồng tối đa để cào 
 
 # Headers chung
 HEADERS = {
@@ -163,9 +163,8 @@ if __name__ == '__main__':
                 print("  -> Trang này toàn link cũ. Dừng phân trang.")
                 break
                 
-            time.sleep(1) # Nghỉ nhẹ giữa các trang
+            time.sleep(1) # thời gian nghỉ giữa các trang
 
-        # 3. LOẠI BỎ LINK ĐÃ CÓ TRONG CSV CŨ
         output_folder = 'data/raw'
         os.makedirs(output_folder, exist_ok=True)
         category_name = urlparse(category_url).path.strip('/').replace('/', '_') or "trang-chu"

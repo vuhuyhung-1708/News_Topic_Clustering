@@ -36,38 +36,36 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'data', 'processed')
 TWO_STAGE_DIR = os.path.join(PROCESSED_DIR, 'kmeans_clustered_results')
 
-# --- BẢN ĐỒ TÊN CHỦ ĐỀ (GIỮ NGUYÊN) ---
 TOPIC_NAMES = {
-    1:  "Sách & Đọc",
-    3:  "Đời sống – Văn hóa",
-    18: "Công nghệ – Doanh nghiệp",
+    1:  "Sách & Văn học",
+    3:  "Văn hóa – Nhân vật",
+    18: "Công nghệ & AI",
     9:  "Chính trị – Phát triển",
-    2:  "Ẩm thực – Đô thị",
-    5:  "Ô tô – Xe máy",
-    10: "Pháp luật – Hình sự",
-    17: "Gia đình – Hôn nhân",
-    6:  "Bóng đá quốc tế",
-    23: "Sức khỏe – Dinh dưỡng",
-    26: "Ngân hàng – Chứng khoán",
-    7:  "Giáo dục – Học đường",
-    19: "Y tế – Bệnh viện",
-    4:  "Du lịch – Trải nghiệm",
-    21: "Điện ảnh – Giải trí",
-    20: "Điện thoại – Công nghệ",
-    8:  "Thời sự quốc tế",
+    2:  "Ẩm thực & Không gian sống",
+    5:  "Ô tô & Xe điện",
+    10: "Tội phạm & Pháp luật",
+    17: "Gia đình & Hôn nhân",
+    6:  "Bóng đá châu Âu",
+    23: "Sức khỏe & Dinh dưỡng",
+    26: "Ngân hàng & Chứng khoán",
+    7:  "Giáo dục & Học đường",
+    19: "Bệnh viện & Điều trị",
+    4:  "Du lịch & Trải nghiệm",
+    21: "Điện ảnh & Sao",
+    20: "Điện thoại & Thiết bị số",
+    8:  "Chính trị quốc tế",
     27: "Bóng đá châu Á",
-    11: "Âm nhạc – Nghệ sĩ",
+    11: "Âm nhạc & Biểu diễn",
     16: "Xung đột – Địa chính trị",
-    24: "Giao thông – Tai nạn",
-    0:  "Giá vàng – Thị trường",
+    24: "Tai nạn & Giao thông",
+    0:  "Vàng & Thị trường",
     25: "An toàn thực phẩm",
-    12: "Tuyển sinh – Thi cử",
-    15: "Thời trang – Sao",
+    12: "Tuyển sinh & Thi cử",
+    15: "Thời trang & Phong cách",
     13: "Chiến sự Ukraine",
-    14: "Tham nhũng – Xét xử",
+    14: "Tham nhũng & Xét xử",
     22: "Truyện Kiều"
 }
-
 
 # --- 1. HÀM NẠP DỮ LIỆU & MODEL ---
 @st.cache_resource
@@ -76,18 +74,18 @@ def load_data_and_models():
         vec = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_tfidf_vectorizer.pkl'), 'rb'))
         lsa = pickle.load(open(os.path.join(PROCESSED_DIR, 'lsa_model.pkl'), 'rb'))
         
-        # Đọc model K=34
-        km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_model_k22.pkl'), 'rb'))
+        # Đọc model 
+        km = pickle.load(open(os.path.join(TWO_STAGE_DIR, 'kmeans_model_k28.pkl'), 'rb'))
         
         with open(os.path.join(PROCESSED_DIR, 'lsa_matrix.pkl'), 'rb') as f:
             lsa_matrix = pickle.load(f)
 
-        # Đọc file CSV K=34
-        df_path = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k22.csv')
+        # Đọc file CSV 
+        df_path = os.path.join(TWO_STAGE_DIR, 'kmeans_clusters_k28.csv')
         if os.path.exists(df_path):
             df = pd.read_csv(df_path)
             
-            # Chuẩn hóa tên cột cluster (nếu file cũ dùng 'cluster')
+            # Chuẩn hóa tên cột cluster
             if 'kmeans_cluster' not in df.columns and 'cluster' in df.columns:
                 df = df.rename(columns={'cluster': 'kmeans_cluster'})
 
@@ -103,8 +101,8 @@ def load_data_and_models():
         return None, None, None, None, None
 
 
-# --- 2. HÀM TÍNH TOÁN TRENDING (ĐÃ SỬA LỖI "KHÔNG TÌM THẤY") ---
-# --- HÀM KIỂM TRA BÀI BÁO HỢP LỆ (HELPER FUNCTION) ---
+# --- 2. HÀM TÍNH TOÁN TRENDING 
+# --- HÀM KIỂM TRA BÀI BÁO HỢP LỆ  ---
 def is_valid_article(title, url):
     """Kiểm tra xem bài báo có hợp lệ để hiển thị không."""
     title = str(title).strip()
@@ -121,7 +119,7 @@ def is_valid_article(title, url):
     
     return True
 
-# --- 2. HÀM TÍNH TOÁN TRENDING (ĐÃ ĐƠN GIẢN HÓA) ---
+# --- 2. HÀM TÍNH TOÁN TRENDING
 def get_trending_topics(df, matrix, kmeans, vectorizer, lsa_model):
     if df is None: return []
     
@@ -134,21 +132,19 @@ def get_trending_topics(df, matrix, kmeans, vectorizer, lsa_model):
     original_centroids = svd.inverse_transform(kmeans.cluster_centers_)
     ordered_centroids = original_centroids.argsort()[:, ::-1]
     
-    # Lấy Top 10 cụm lớn nhất
-    top_clusters = df['kmeans_cluster'].value_counts().sort_values(ascending=False).head(10)
+    # Lấy Top 28 cụm 
+    top_clusters = df['kmeans_cluster'].value_counts().sort_values(ascending=False).head(28)
     
     trending_list = []
     
     for cluster_id, count in top_clusters.items():
         # 2. Lấy từ khóa (Keywords)
         keywords = [terms[i].replace("_", " ") for i in ordered_centroids[cluster_id, :20]]
-        
         # 3. Lấy và sắp xếp các bài báo trong cụm theo khoảng cách đến tâm
         indices = df.index[df['kmeans_cluster'] == cluster_id].tolist()
         cluster_dists = distances[indices, cluster_id]
         # Lấy index thực của 100 bài gần tâm nhất
         sorted_indices = [indices[i] for i in np.argsort(cluster_dists)[:100]]
-        
         # 4. Tìm bài đại diện và bài liên quan
         valid_articles = []
         seen_titles = set() # Dùng để khử trùng lặp tiêu đề
@@ -162,11 +158,11 @@ def get_trending_topics(df, matrix, kmeans, vectorizer, lsa_model):
                 valid_articles.append({'title': title, 'url': url})
                 seen_titles.add(title)
             
-            # Chỉ cần tìm đủ 11 bài (1 đại diện + 10 liên quan) là dừng
+            # Giới hạn tối đa 11 bài (1 đại diện + 10 liên quan)
             if len(valid_articles) >= 11:
                 break
         
-        # 5. Đóng gói kết quả (nếu tìm được ít nhất 1 bài)
+        # 5. Đóng gói kết quả 
         if valid_articles:
             trending_list.append({
                 'id': cluster_id,
@@ -194,14 +190,10 @@ if df_data is not None:
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2965/2965879.png", width=80)
     st.title("Hot News Detection")
-    st.info(f"Mô hình phân cụm: K-Means (K=34)")
     
     if df_data is not None:
         st.metric(label="Tổng số bài báo", value=f"{len(df_data):,}")
-    
-    st.markdown("---")
-    st.caption("Sinh viên: Vũ Huy Hưng")
-    st.caption("Đồ án Tốt nghiệp")
+   
 
 # === MAIN CONTENT: TOP TRENDING ===
 st.markdown("<h1 style='text-align: center; color: #d32f2f;'>🔥 CÁC CHỦ ĐỀ TIN TỨC NỔI BẬT NHẤT 🔥</h1>", unsafe_allow_html=True)
@@ -251,6 +243,3 @@ with col_content:
     else:
         st.error("Không tìm thấy dữ liệu. Vui lòng kiểm tra lại thư mục data.")
 
-# Footer
-st.markdown("---")
-st.caption("Đồ án Tốt nghiệp | GVHD: TS. Nguyễn Mạnh Hiển")

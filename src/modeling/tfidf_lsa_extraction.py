@@ -40,14 +40,11 @@ except Exception as e:
 
 # Kết hợp với LSA (TruncatedSVD)
 print(f"\nĐang thực hiện LSA để nén từ {X_tfidf.shape[1]} xuống {N_COMPONENTS} chiều...")
-start_time = time.time()
 svd = TruncatedSVD(n_components=N_COMPONENTS, random_state=42)
 normalizer = Normalizer(copy=False)
 lsa_pipeline = make_pipeline(svd, normalizer)
 X_lsa = lsa_pipeline.fit_transform(X_tfidf)
-explained_variance = svd.explained_variance_ratio_.sum()
-print(f"LSA hoàn tất! Kích thước ma trận mới: {X_lsa.shape} (Thời gian: {time.time() - start_time:.2f}s)")
-print(f"   -> LSA giữ lại được {explained_variance:.1%} thông tin.")
+print(f"LSA hoàn tất! Kích thước ma trận mới: {X_lsa.shape} ")
 
 print("\nĐang lưu các file model và ma trận đã xử lý")
 try:
